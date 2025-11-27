@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Sleep Journal System - Layout</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+
+  <body class="bg-gray-100 font-sans">
+    <!-- Header -->
+    <header class="bg-blue-600 text-white p-4 text-center text-xl font-bold">
+      מערכת יומני שינה
+    </header>
+
+    <main class="p-6">
+      <!-- -------------------------------------- -->
+      <!-- Role Selection Screen -->
+      <!-- -------------------------------------- -->
+      <section id="roleScreen" class="screen">
+        <div class="max-w-md mx-auto bg-white p-6 shadow rounded text-center">
+          <h2 class="text-2xl font-bold mb-6">בחר תפקיד להתחברות</h2>
+
+          <button
+            onclick="openLogin('student')"
+            class="w-full bg-blue-600 text-white p-3 rounded mb-4 font-bold"
+          >
+            כניסת תלמיד
+          </button>
+
+          <button
+            onclick="openLogin('teacher')"
+            class="w-full bg-green-600 text-white p-3 rounded mb-4 font-bold"
+          >
+            כניסת מורה
+          </button>
+
+          <button
+            onclick="openLogin('research')"
+            class="w-full bg-purple-600 text-white p-3 rounded font-bold"
+          >
+            כניסת מנהל מחקר
+          </button>
+        </div>
+      </section>
+
+      <!-- -------------------------------------- -->
+      <!-- Login Screen -->
+      <!-- -------------------------------------- -->
+      <section id="loginScreen" class="screen hidden">
+        <div class="max-w-md mx-auto bg-white p-6 shadow rounded">
+          <h2 id="loginTitle" class="text-xl font-bold mb-4"></h2>
+
+          <!-- Student Login Form -->
+          <div id="studentForm" class="hidden">
+            <label class="block mb-2">מספר טופס:</label>
+            <input
+              id="studentFormId"
+              type="text"
+              class="w-full p-2 border rounded mb-4"
+            />
+            <button
+              onclick="studentLogin()"
+              class="bg-blue-600 text-white w-full p-2 rounded"
+            >
+              התחבר
+            </button>
+          </div>
+
+          <!-- Teacher Login Form -->
+          <div id="teacherForm" class="hidden">
+            <label class="block mb-2">שם משתמש:</label>
+            <input
+              id="teacherUser"
+              type="text"
+              class="w-full p-2 border rounded mb-3"
+            />
+            <label class="block mb-2">סיסמה:</label>
+            <input
+              id="teacherPass"
+              type="password"
+              class="w-full p-2 border rounded mb-4"
+            />
+            <button
+              onclick="teacherLogin()"
+              class="bg-green-600 text-white w-full p-2 rounded"
+            >
+              התחבר
+            </button>
+          </div>
+
+          <!-- Research Manager Login Form -->
+          <div id="researchForm" class="hidden">
+            <label class="block mb-2">שם משתמש:</label>
+            <input
+              id="researchUser"
+              type="text"
+              class="w-full p-2 border rounded mb-3"
+            />
+            <label class="block mb-2">סיסמה:</label>
+            <input
+              id="researchPass"
+              type="password"
+              class="w-full p-2 border rounded mb-4"
+            />
+            <button
+              onclick="researchLogin()"
+              class="bg-purple-600 text-white w-full p-2 rounded"
+            >
+              התחבר
+            </button>
+          </div>
+
+          <button onclick="backToRole()" class="mt-4 underline text-blue-600">
+            חזרה לבחירת תפקיד
+          </button>
+        </div>
+      </section>
+
+      <!-- -------------------------------------- -->
+      <!-- Student Dashboard -->
+      <!-- -------------------------------------- -->
+      <section id="studentDashboard" class="screen hidden">
+        <img
+          id="gameLockedImg"
+          src="game_locked.png"
+          class="w-16 absolute top-[110px] right-[170px] opacity-90 z-50"
+        />
+
+        <div class="flex justify-end mb-4">
+          <button
+            onclick="logout()"
+            class="bg-red-600 text-white px-4 py-2 rounded"
+          >
+            התנתק
+          </button>
+        </div>
+
+        <h2 class="text-2xl font-bold mb-4">לוח תלמיד</h2>
+
+        <div class="bg-white p-4 shadow rounded mb-6">
+          <h3 class="font-bold mb-2">התקדמות:</h3>
+          <div class="w-full bg-gray-300 rounded h-6">
+            <div
+              id="progressBar"
+              class="h-6 bg-green-500 rounded"
+              style="width: 0%"
+            ></div>
+          </div>
+          <p class="mt-2 font-semibold">
+            התקדמות נוכחית: <span id="progressText">0%</span>
+          </p>
+        </div>
+
+        <div class="bg-white p-4 shadow rounded">
+          <!-- Multiple Choice Sleep Hours Question -->
+          <h3 class="font-bold mb-2">כמה שעות ישנת בלילה?</h3>
+          <div class="mb-4 space-y-2">
+            <label class="flex items-center gap-2">
+              <input
+                type="radio"
+                name="sleepHours"
+                value="1-3"
+                class="h-4 w-4"
+              />
+              <span>1–3 שעות</span>
+            </label>
+
+            <label class="flex items-center gap-2">
+              <input
+                type="radio"
+                name="sleepHours"
+                value="3-6"
+                class="h-4 w-4"
+              />
+              <span>3–6 שעות</span>
+            </label>
+
+            <label class="flex items-center gap-2">
+              <input
+                type="radio"
+                name="sleepHours"
+                value="6-9"
+                class="h-4 w-4"
+              />
+              <span>6–9 שעות</span>
+            </label>
+
+            <label class="flex items-center gap-2">
+              <input
+                type="radio"
+                name="sleepHours"
+                value="9-12"
+                class="h-4 w-4"
+              />
+              <span>9–12 שעות</span>
+            </label>
+          </div>
+
+          <h3 class="font-bold mb-2">מילוי יומן שינה</h3>
+          <textarea class="w-full p-2 border rounded mb-4" rows="3"></textarea>
+
+          <button
+            class="bg-green-600 text-white px-4 py-2 rounded"
+            onclick="submitJournal()"
+          >
+            שלח יומן
+          </button>
+
+          <p id="motivationMsg" class="mt-3 text-green-700 font-bold hidden">
+            כל הכבוד!
+          </p>
+        </div>
+      </section>
+
+      <!-- -------------------------------------- -->
+      <!-- Teacher Dashboard -->
+      <!-- -------------------------------------- -->
+      <section id="teacherDashboard" class="screen hidden">
+        <div class="flex justify-end mb-4">
+          <button
+            onclick="logout()"
+            class="bg-red-600 text-white px-4 py-2 rounded"
+          >
+            התנתק
+          </button>
+        </div>
+
+        <h2 class="text-2xl font-bold mb-4">לוח מורה</h2>
+
+        <!-- Add Custom Question -->
+        <div class="bg-white p-4 shadow rounded mb-6">
+          <h3 class="font-bold mb-2">הוספת שאלה מותאמת:</h3>
+          <input
+            id="questionInput"
+            type="text"
+            class="w-full p-2 border rounded mb-3"
+          />
+          <button
+            class="bg-blue-600 text-white px-4 py-2 rounded"
+            onclick="addQuestion()"
+          >
+            הוסף שאלה
+          </button>
+          <p id="questionError" class="text-red-600 font-bold hidden mt-2">
+            לא ניתן להוסיף יותר מ-5 שאלות.
+          </p>
+          <ul id="questionList" class="list-disc pr-6 mt-4 text-gray-700"></ul>
+        </div>
+
+        <!-- Class Statistics -->
+        <div class="bg-white p-4 shadow rounded">
+          <h3 class="font-bold mb-2">נתוני כיתה (מצטבר):</h3>
+          <p>ממוצע שעות שינה: <span id="avgHours"></span></p>
+          <p>אחוז מילוי: <span id="completionRate"></span></p>
+          <p>מגמה: <span id="trend"></span></p>
+        </div>
+      </section>
+
+      <!-- -------------------------------------- -->
+      <!-- Research Manager Dashboard -->
+      <!-- -------------------------------------- -->
+      <section id="researchDashboard" class="screen hidden">
+        <div class="flex justify-end mb-4">
+          <button
+            onclick="logout()"
+            class="bg-red-600 text-white px-4 py-2 rounded"
+          >
+            התנתק
+          </button>
+        </div>
+
+        <h2 class="text-2xl font-bold mb-4">לוח מנהל מחקר</h2>
+
+        <!-- Research Manager Actions -->
+        <div class="bg-white p-4 shadow rounded mb-6">
+          <h3 class="font-bold mb-3 text-lg">פעולות מנהל:</h3>
+
+          <div class="flex gap-4 flex-wrap">
+            <button
+              onclick="downloadData()"
+              class="bg-blue-600 text-white px-4 py-2 rounded"
+            >
+              הורד מידע
+            </button>
+
+            <button
+              onclick="approveQuestions()"
+              class="bg-green-600 text-white px-4 py-2 rounded"
+            >
+              אישור שאלות מורים
+            </button>
+          </div>
+
+          <p
+            id="researchActionMsg"
+            class="mt-3 font-bold text-blue-700 hidden"
+          ></p>
+        </div>
+
+        <!-- National Statistics -->
+        <div class="bg-white p-6 shadow rounded">
+          <h3 class="font-bold mb-3">מידע מצטבר ארצי:</h3>
+          <p>סה"כ תלמידים: <span id="totalStudents"></span></p>
+          <p>ממוצע שעות שינה: <span id="avgNationalHours"></span></p>
+          <p>אחוז מילוי: <span id="avgNationalCompletion"></span></p>
+          <p>מגמה: <span id="nationalTrend"></span></p>
+        </div>
+      </section>
+    </main>
+
+    <!-- -------------------------------------- -->
+    <!-- JavaScript -->
+    <!-- -------------------------------------- -->
+    <script>
+      // Fake student information
+      const fakeStudent = { progress: 68 };
+
+      // Fake class data for teacher screen
+      const fakeClassData = {
+        avgHours: 7.3,
+        completionRate: "82%",
+        trend: "מגמת עלייה",
+      };
+
+      // Fake national statistics for research manager
+      const fakeResearchData = {
+        totalStudents: 1240,
+        avgHours: 6.9,
+        avgCompletion: "74%",
+        trend: "עלייה מתונה",
+      };
+
+      // Teacher custom questions list
+      let customQuestions = [];
+
+      // Shows a specific screen and hides all others
+      function show(id) {
+        document
+          .querySelectorAll(".screen")
+          .forEach((s) => s.classList.add("hidden"));
+        document.getElementById(id).classList.remove("hidden");
+      }
+
+      // Returns to role selection
+      function logout() {
+        show("roleScreen");
+      }
+
+      // Opens the login form for the selected role
+      function openLogin(role) {
+        show("loginScreen");
+
+        studentForm.classList.add("hidden");
+        teacherForm.classList.add("hidden");
+        researchForm.classList.add("hidden");
+
+        if (role === "student") {
+          loginTitle.innerText = "כניסת תלמיד";
+          studentForm.classList.remove("hidden");
+        }
+        if (role === "teacher") {
+          loginTitle.innerText = "כניסת מורה";
+          teacherForm.classList.remove("hidden");
+        }
+        if (role === "research") {
+          loginTitle.innerText = "כניסת מנהל מחקר";
+          researchForm.classList.remove("hidden");
+        }
+      }
+
+      // Back to role screen
+      function backToRole() {
+        show("roleScreen");
+      }
+
+      // Student login simulation
+      function studentLogin() {
+        updateProgress(fakeStudent.progress);
+        show("studentDashboard");
+      }
+
+      // Teacher login simulation
+      function teacherLogin() {
+        loadClassData();
+        show("teacherDashboard");
+      }
+
+      // Research login simulation
+      function researchLogin() {
+        loadResearchData();
+        show("researchDashboard");
+      }
+
+      // Updates progress bar for student
+      function updateProgress(v) {
+        progressBar.style.width = v + "%";
+        progressText.innerText = v + "%";
+      }
+
+      // Handles journal submission for student
+      function submitJournal() {
+        const selected = document.querySelector(
+          "input[name='sleepHours']:checked"
+        );
+        if (!selected) {
+          alert("Please select the number of sleep hours before submitting.");
+          return;
+        }
+        motivationMsg.classList.remove("hidden");
+      }
+
+      // Adds a teacher custom question
+      function addQuestion() {
+        const q = questionInput.value.trim();
+        if (!q) return;
+
+        if (customQuestions.length >= 5) {
+          questionError.classList.remove("hidden");
+          return;
+        }
+
+        customQuestions.push(q);
+        updateQuestionsList();
+        questionInput.value = "";
+      }
+
+      // Updates the custom questions list
+      function updateQuestionsList() {
+        questionList.innerHTML = "";
+        customQuestions.forEach((q) => {
+          const li = document.createElement("li");
+          li.innerText = q;
+          questionList.appendChild(li);
+        });
+      }
+
+      // Loads class data into teacher dashboard
+      function loadClassData() {
+        avgHours.innerText = fakeClassData.avgHours;
+        completionRate.innerText = fakeClassData.completionRate;
+        trend.innerText = fakeClassData.trend;
+      }
+
+      // Loads national data into research dashboard
+      function loadResearchData() {
+        totalStudents.innerText = fakeResearchData.totalStudents;
+        avgNationalHours.innerText = fakeResearchData.avgHours;
+        avgNationalCompletion.innerText = fakeResearchData.avgCompletion;
+        nationalTrend.innerText = fakeResearchData.trend;
+      }
+
+      // Simulates a "download data" action
+      function downloadData() {
+        researchActionMsg.innerText = "Downloading data (demo)";
+        researchActionMsg.classList.remove("hidden");
+      }
+
+      // Simulates "approve questions" action
+      function approveQuestions() {
+        researchActionMsg.innerText = "All teacher questions approved (demo)";
+        researchActionMsg.classList.remove("hidden");
+      }
+    </script>
+  </body>
+</html>
