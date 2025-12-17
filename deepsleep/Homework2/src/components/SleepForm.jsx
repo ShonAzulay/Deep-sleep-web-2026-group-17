@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { saveSleepEntry } from "../services/sleepEntriesService";
+
 
 export default function SleepForm() {
   const steps = [
@@ -27,6 +29,16 @@ export default function SleepForm() {
     bedtime: "",
   });
 
+  // Save the entry when the user completes the form
+  useEffect(() => {
+    if (step === steps.length) {
+      // Fire-and-forget; log errors if any
+      saveSleepEntry(answers).catch((err) =>
+        console.error("Failed to save sleep entry", err)
+      );
+    }
+  }, [step, answers, steps.length]);
+
   // 🔒 הגנה מלאה – מונע מסך לבן
   if (step >= steps.length) {
     return (
@@ -37,7 +49,10 @@ export default function SleepForm() {
         </div>
 
         <button
-          onClick={() => setStep(0)}
+          onClick={() => {
+            setStep(0);
+            setAnswers({ hours: "", quality: null, bedtime: "" });
+          }}
           className="w-full rounded-2xl border py-3 font-semibold text-slate-800"
         >
           למלא שוב
