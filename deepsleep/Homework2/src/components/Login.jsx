@@ -8,7 +8,7 @@ const ROLE_LABEL = {
 };
 
 export default function Login({ role, onLogin, onBack }) {
-  const [username, setUsername] = useState(""); // לכל התפקידים זה username
+  const [username, setUsername] = useState(""); 
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -21,28 +21,23 @@ export default function Login({ role, onLogin, onBack }) {
     setLoading(true);
 
     try {
-      // מנהל מחקר: בדיקה מול DB
-      if (role === "researchManager") {
-        const user = await loginWithDb({
-          role,
-          username: username.trim(),
-          password: password.trim(),
-        });
+      // בדיקה אחידה מול ה-DB לכל התפקידים
+      const user = await loginWithDb({
+        role,
+        username: username.trim(),
+        password: password.trim(),
+      });
 
-        if (!user) {
-          setError("שם משתמש או סיסמה לא נכונים");
-          return;
-        }
-
-        onLogin(user);
+      if (!user) {
+        setError("שם משתמש או סיסמה לא נכונים");
         return;
       }
 
-      // תלמיד/מורה: זמני (עד שתחבר גם אותם ל-DB)
-      onLogin({ username: username.trim(), role });
+      // במידה ונמצא משתמש ב-DB, עוברים לדשבורד
+      onLogin(user);
     } catch (e) {
-      console.error(e);
-      setError("שגיאה בהתחברות");
+      console.error("Login Error:", e);
+      setError("שגיאה בחיבור למערכת");
     } finally {
       setLoading(false);
     }
