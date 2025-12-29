@@ -1,11 +1,15 @@
 import { useState } from "react";
+import ResearchStatsView from "./ResearchStatsView";
+
 import { 
   researchManagerCreateStudent, 
   researchManagerDeleteStudent // הוספנו את הייבוא של פונקציית המחיקה
 } from "../services/researchManagerStudentUpload";
 
+
 export default function ResearchManagerDashboard({ onLogout }) {
-  const [view, setView] = useState("menu"); // "menu" | "createStudent" | "deleteStudent"
+  const [view, setView] = useState("menu"); // "menu" | "createStudent" | "deleteStudent| stats"
+  
 
   const [studentUsername, setStudentUsername] = useState("");
   const [studentClassName, setStudentClassName] = useState("");
@@ -68,6 +72,9 @@ export default function ResearchManagerDashboard({ onLogout }) {
     } finally {
       setLoading(false);
     }
+  }
+  if (view === "stats") {
+  return <ResearchStatsView onBack={() => setView("menu")} />;
   }
 
   // ---------------- מסך הכנסת תלמיד / מחיקת תלמיד ----------------
@@ -189,13 +196,14 @@ export default function ResearchManagerDashboard({ onLogout }) {
         </div>
 
         <div className="mt-10 space-y-5">
-          <button
+         <button
             type="button"
-            className="w-full rounded-2xl bg-indigo-600 py-6
-                       text-xl font-bold text-white hover:opacity-95"
+            onClick={() => setView("stats")}
+            className="w-full rounded-2xl bg-indigo-600 py-6 text-xl font-bold text-white hover:opacity-95"
           >
             צפייה בסטטיסטיקה
           </button>
+
 
           <button
             type="button"

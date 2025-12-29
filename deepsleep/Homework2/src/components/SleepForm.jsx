@@ -6,8 +6,15 @@ export default function SleepForm({ onLogout }) {
     {
       key: "hours",
       title: "כמה שעות ישנת הלילה?",
-      type: "number",
-      placeholder: "לדוגמה: 7.5",
+      type: "select",
+      options: [
+        { value: "0-4", label: "פחות מ-4 שעות" },
+        { value: "4-5", label: "בין 4 ל-5 שעות" },
+        { value: "5-6", label: "בין 5 ל-6 שעות" },
+        { value: "6-7", label: "בין 6 ל-7 שעות" },
+        { value: "7-8", label: "בין 7 ל-8 שעות" },
+        { value: "8+",  label: "יותר מ-8 שעות" },
+      ],
     },
     {
       key: "quality",
@@ -15,10 +22,21 @@ export default function SleepForm({ onLogout }) {
       type: "rating",
     },
     {
-      key: "bedtime",
-      title: "באיזו שעה הלכת לישון?",
-      type: "time",
-    },
+    key: "bedtime",
+    title: "באיזו שעה הלכת לישון?",
+    type: "select", 
+    options: [
+      { value: "before_21:00", label: "לפני 21:00" },
+      { value: "21:00", label: "21:00" },
+      { value: "21:30", label: "21:30" },
+      { value: "22:00", label: "22:00" },
+      { value: "22:30", label: "22:30" },
+      { value: "23:00", label: "23:00" },
+      { value: "23:30", label: "23:30" },
+      { value: "00:00", label: "00:00" },
+      { value: "after_00:00", label: "אחרי 00:00" },
+    ],
+  },
     {
       key: "bed_entry",
       title: "מתי נכנסת למיטה?",
