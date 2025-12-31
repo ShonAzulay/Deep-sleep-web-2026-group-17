@@ -1,20 +1,40 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
-import { teacherGetClassData, teacherSaveCustomQuestions } from "../services/teacherService";
+import { teacherGetClassData } from "../services/teacherService";
+import { submitQuestionRequest } from "../services/classCustomizationService";
 
 export default function TeacherDashboard({ onLogout }) {
   const [view, setView] = useState("menu"); // "menu" | "addQuestions" | "viewData"
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  
+
   const [sleepData, setSleepData] = useState([]);
-  const [customQuestions, setCustomQuestions] = useState(["", "", "", "", ""]);
+  const [questionText, setQuestionText] = useState("");
+
+  // Context from Session
+  const [context, setContext] = useState(null);
+
+  useEffect(() => {
+    try {
+      const userStr = sessionStorage.getItem("currentUser");
+      if (userStr) {
+        setContext(JSON.parse(userStr));
+      }
+    } catch (e) {
+      console.error("Error parsing user context", e);
+    }
+  }, []);
 
   // פונקציה לצפייה בנתונים
   async function handleFetchData() {
+    if (!context?.experimentId || !context?.classId) {
+      alert("חסר מידע על הניסוי/כיתה. אנא התחבר מחדש.");
+      return;
+    }
+
     setLoading(true);
     try {
-      const data = await teacherGetClassData();
+      const data = await teacherGetClassData(context.experimentId, context.classId);
       setSleepData(data);
       setView("viewData");
     } catch (e) {
@@ -25,13 +45,18 @@ export default function TeacherDashboard({ onLogout }) {
   }
 
   // פונקציה לשמירת שאלות
-  async function handleSaveQuestions() {
+  async function handleSaveQuestion() {
+    if (!context?.experimentId || !context?.classId) {
+      alert("חסר מידע על הניסוי/כיתה. אנא התחבר מחדש.");
+      return;
+    }
+
     setLoading(true);
     setMessage("");
     try {
-      await teacherSaveCustomQuestions("teacher_123", "Class_A", customQuestions);
-      setMessage("השאלות נשמרו בהצלחה וממתינות לאישור המנהלת.");
-      setCustomQuestions(["", "", "", "", ""]);
+      await submitQuestionRequest(context.experimentId, context.classId, questionText);
+      setMessage("השאלה נשלחה בהצלחה וממתינה לאישור.");
+      setQuestionText("");
     } catch (e) {
       alert(e.message);
     } finally {
@@ -46,59 +71,50 @@ export default function TeacherDashboard({ onLogout }) {
     XLSX.writeFile(wb, "Class_Sleep_Report.xlsx"); // ייצוא לאקסל
   };
 
- // ---------------- תצוגת הוספת שאלות כיתתיות ----------------
-if (view === "addQuestions") {
-  return (
-    <div dir="rtl" className="min-h-screen flex items-center justify-center bg-slate-900 px-4">
-      <div className="w-full max-w-md rounded-3xl bg-white/95 p-8 shadow-2xl">
-        <h1 className="text-2xl font-bold text-center text-slate-900 mb-2">הוספת שאלות כיתתיות</h1>
-        
+  // ---------------- תצוגת הוספת שאלות כיתתיות ----------------
+  if (view === "addQuestions") {
+    return (
+      <div dir="rtl" className="min-h-screen flex items-center justify-center bg-slate-900 px-4">
+        <div className="w-full max-w-md rounded-3xl bg-white/95 p-8 shadow-2xl">
+          <h1 className="text-2xl font-bold text-center text-slate-900 mb-2">הצעת שאלה חדשה</h1>
 
-        <p className="text-center text-slate-600 mb-6 text-sm">
-          ניתן להוסיף עד 5 שאלות ייחודיות לכיתה
-        </p>
+          <p className="text-center text-slate-600 mb-6 text-sm">
+            הכנס את השאלה שברצונך להוסיף. השאלה תועבר לאישור מנהל המחקר.
+          </p>
 
-        <div className="space-y-3">
-          {customQuestions.map((q, i) => (
-            <input 
-              key={i} 
-              type="text" 
-              placeholder={`שאלה ${i + 1}`} 
-              value={q}
-              onChange={(e) => {
-                const n = [...customQuestions]; 
-                n[i] = e.target.value; 
-                setCustomQuestions(n);
-              }} 
-              className="w-full rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500" 
+          <div className="space-y-3">
+            <textarea
+              placeholder="כתוב כאן את השאלה..."
+              value={questionText}
+              onChange={(e) => setQuestionText(e.target.value)}
+              className="w-full rounded-xl border px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500 min-h-[100px]"
             />
-          ))}
-          
-          <button 
-            onClick={handleSaveQuestions} 
-            disabled={loading}
-            className="w-full rounded-2xl bg-indigo-600 py-3 font-bold text-white disabled:opacity-50 mt-4 transition-all hover:opacity-90"
-          >
-            {loading ? "שומר..." : "שמור שאלות"}
-          </button>
 
-          {message && (
-            <p className="text-center text-emerald-700 text-sm font-medium mt-2">
-              {message}
-            </p>
-          )}
+            <button
+              onClick={handleSaveQuestion}
+              disabled={loading || !questionText.trim()}
+              className="w-full rounded-2xl bg-indigo-600 py-3 font-bold text-white disabled:opacity-50 mt-4 transition-all hover:opacity-90"
+            >
+              {loading ? "שולח..." : "שלח שאלה לאישור"}
+            </button>
 
-          <button 
-            onClick={() => { setView("menu"); setMessage(""); }} 
-            className="w-full rounded-2xl border border-slate-300 py-3 font-semibold text-slate-800 transition-all hover:bg-slate-50"
-          >
-            חזרה לתפריט
-          </button>
+            {message && (
+              <p className="text-center text-emerald-700 text-sm font-medium mt-2">
+                {message}
+              </p>
+            )}
+
+            <button
+              onClick={() => { setView("menu"); setMessage(""); }}
+              className="w-full rounded-2xl border border-slate-300 py-3 font-semibold text-slate-800 transition-all hover:bg-slate-50"
+            >
+              חזרה לתפריט
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
   // ---------------- תצוגת טבלת נתונים ----------------
   if (view === "viewData") {
     return (
@@ -114,11 +130,12 @@ if (view === "addQuestions") {
                 <tr><th className="p-3 border">שעות שינה</th><th className="p-3 border">איכות שינה</th><th className="p-3 border">פעילות שבוצעה לפני השינה</th></tr>
               </thead>
               <tbody>
-                {sleepData.map((d, i) => (
-                  <tr key={i} className="hover:bg-slate-50 border-t">
-                    <td className="p-3 border">{d.hours}</td><td className="p-3 border">{d.quality}</td><td className="p-3 border">{d.pre_sleep_activity?.join(", ")}</td>
-                  </tr>
-                ))}
+                {sleepData.length === 0 ? <tr><td colSpan="3" className="p-4 text-center">אין נתונים</td></tr> :
+                  sleepData.map((d, i) => (
+                    <tr key={i} className="hover:bg-slate-50 border-t">
+                      <td className="p-3 border">{d.hours}</td><td className="p-3 border">{d.quality}</td><td className="p-3 border">{Array.isArray(d.pre_sleep_activity) ? d.pre_sleep_activity.join(", ") : d.pre_sleep_activity}</td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
@@ -133,12 +150,15 @@ if (view === "addQuestions") {
     <div dir="rtl" className="min-h-screen flex items-center justify-center bg-slate-900 px-4">
       <div className="w-full max-w-2xl rounded-3xl bg-white/95 p-10 shadow-2xl">
         <div className="flex justify-between items-center mb-10">
-          <h1 className="text-3xl font-extrabold text-slate-900">דשבורד מורה</h1>
+          <div>
+            <h1 className="text-3xl font-extrabold text-slate-900">דשבורד מורה</h1>
+            {context?.className && <p className="text-slate-500 font-bold mt-1">כיתה: {context.className}</p>}
+          </div>
           <button onClick={onLogout} className="rounded-xl bg-slate-900 px-4 py-2 text-white font-semibold">התנתק</button>
         </div>
         <div className="space-y-5">
           <button onClick={handleFetchData} className="w-full rounded-2xl bg-indigo-600 py-6 text-xl font-bold text-white hover:opacity-95">צפייה בנתונים וייצוא</button>
-          <button onClick={() => setView("addQuestions")} className="w-full rounded-2xl bg-emerald-600 py-6 text-xl font-bold text-white hover:opacity-95">הוספת שאלות כיתתיות</button>
+          <button onClick={() => setView("addQuestions")} className="w-full rounded-2xl bg-emerald-600 py-6 text-xl font-bold text-white hover:opacity-95">הצעת שאלה חדשה</button>
         </div>
       </div>
     </div>

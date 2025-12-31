@@ -8,7 +8,7 @@ const ROLE_LABEL = {
 };
 
 export default function Login({ role, onLogin, onBack }) {
-  const [username, setUsername] = useState(""); 
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -33,7 +33,10 @@ export default function Login({ role, onLogin, onBack }) {
         return;
       }
 
-      // במידה ונמצא משתמש ב-DB, עוברים לדשבורד
+      // שמירת פרטי המשתמש (כולל experimentId ו-classId) ב-Session
+      sessionStorage.setItem("currentUser", JSON.stringify(user));
+
+      // מעבר לדשבורד
       onLogin(user);
     } catch (e) {
       console.error("Login Error:", e);

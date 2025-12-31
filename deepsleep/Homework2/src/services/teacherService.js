@@ -1,43 +1,28 @@
 import { db } from "./firebase";
-import { collection, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 
 /**
- * שליפת נתוני שינה- כולל הסרת הID לצורך אנונימיות
+ * שליפת נתוני שינה עבור כיתה ספציפית
+ * data path: experiments/{expId}/classes/{classId}/responses
  */
-export async function teacherGetClassData() {
+export async function teacherGetClassData(experimentId, classId) {
+  if (!experimentId || !classId) {
+    throw new Error("Must provide experimentId and classId");
+  }
+
   try {
-    const querySnapshot = await getDocs(collection(db, "sleepEntries"));
+    const colRef = collection(db, "experiments", experimentId, "classes", classId, "responses");
+    const querySnapshot = await getDocs(colRef);
+
     return querySnapshot.docs.map((doc) => {
       const data = doc.data();
-      // התממה: מסירים כל מזהה אישי אם קיים
-      const { userId, studentName, userEmail, ...anonymizedData } = data; 
+      // התממה: מסירים זיהוי אישי
+      // בגלל השינוי במבנה, הזהות היא ב-ID או בשדות המפורשים
+      const { studentId, userEmail, ...anonymizedData } = data;
       return anonymizedData;
     });
   } catch (e) {
+    console.error(e);
     throw new Error("שגיאה במשיכת נתונים");
-  }
-}
-
-/**
- * שמירת שאלות ייחודיות לכיתה (עד 5 שאלות)
- */
-export async function teacherSaveCustomQuestions(teacherId, className, questions) {
-  const filtered = questions.filter(q => q.trim() !== ""); // סינון שדות ריקים
-  
-  if (filtered.length === 0) {
-    throw new Error("חובה להזין לפחות שאלה אחת");
-  }
-
-  try {
-    return await addDoc(collection(db, "classCustomizations"), {
-      teacherId,
-      className,
-      questions: filtered, // עד 5 שאלות
-      status: "pending", // ממתין לאישור מנהלת פרויקט
-      createdAt: serverTimestamp()
-    });
-  } catch (e) {
-    console.error("Error saving questions:", e);
-    throw new Error("שגיאה בשמירת השאלות בבסיס הנתונים");
   }
 }

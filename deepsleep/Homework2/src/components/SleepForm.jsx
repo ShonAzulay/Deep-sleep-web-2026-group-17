@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { saveSleepEntry } from "../services/sleepEntriesService";
-
+//test
 export default function SleepForm({ onLogout }) {
   const steps = [
     {
@@ -13,7 +13,7 @@ export default function SleepForm({ onLogout }) {
         { value: "5-6", label: "בין 5 ל-6 שעות" },
         { value: "6-7", label: "בין 6 ל-7 שעות" },
         { value: "7-8", label: "בין 7 ל-8 שעות" },
-        { value: "8+",  label: "יותר מ-8 שעות" },
+        { value: "8+", label: "יותר מ-8 שעות" },
       ],
     },
     {
@@ -22,21 +22,21 @@ export default function SleepForm({ onLogout }) {
       type: "rating",
     },
     {
-    key: "bedtime",
-    title: "באיזו שעה הלכת לישון?",
-    type: "select", 
-    options: [
-      { value: "before_21:00", label: "לפני 21:00" },
-      { value: "21:00", label: "21:00" },
-      { value: "21:30", label: "21:30" },
-      { value: "22:00", label: "22:00" },
-      { value: "22:30", label: "22:30" },
-      { value: "23:00", label: "23:00" },
-      { value: "23:30", label: "23:30" },
-      { value: "00:00", label: "00:00" },
-      { value: "after_00:00", label: "אחרי 00:00" },
-    ],
-  },
+      key: "bedtime",
+      title: "באיזו שעה הלכת לישון?",
+      type: "select",
+      options: [
+        { value: "before_21:00", label: "לפני 21:00" },
+        { value: "21:00", label: "21:00" },
+        { value: "21:30", label: "21:30" },
+        { value: "22:00", label: "22:00" },
+        { value: "22:30", label: "22:30" },
+        { value: "23:00", label: "23:00" },
+        { value: "23:30", label: "23:30" },
+        { value: "00:00", label: "00:00" },
+        { value: "after_00:00", label: "אחרי 00:00" },
+      ],
+    },
     {
       key: "bed_entry",
       title: "מתי נכנסת למיטה?",
@@ -162,13 +162,31 @@ export default function SleepForm({ onLogout }) {
     notes: "",
   });
 
+  const [context, setContext] = useState(null);
+
+  useEffect(() => {
+    try {
+      const userStr = sessionStorage.getItem("currentUser");
+      if (userStr) {
+        setContext(JSON.parse(userStr));
+      }
+    } catch (e) {
+      console.error("Error parsing user context", e);
+    }
+  }, []);
+
   useEffect(() => {
     if (step === steps.length) {
-      saveSleepEntry(answers).catch((err) =>
-        console.error("Failed to save sleep entry", err)
-      );
+      if (!context?.experimentId || !context?.classId || !context?.id) {
+        console.error("Missing user context for saving sleep entry");
+        alert("שגיאה: חסר מידע מזהה (Experiment/Class/Student). נסה להתחבר מחדש.");
+        return;
+      }
+
+      saveSleepEntry(context.experimentId, context.classId, context.id, answers)
+        .catch((err) => console.error("Failed to save sleep entry", err));
     }
-  }, [step, answers, steps.length]);
+  }, [step, answers, steps.length, context]);
 
   if (step >= steps.length) {
     return (
@@ -204,11 +222,11 @@ export default function SleepForm({ onLogout }) {
   // לוגיקה לבדיקה אם אפשר להמשיך (בשאלה אופציונלית תמיד אפשר)
   const canGoNext =
     current.optional || (
-    current.type === "rating"
-      ? answers[current.key] !== null
-      : current.type === "multi"
-      ? answers[current.key].length > 0
-      : String(answers[current.key]).trim() !== ""
+      current.type === "rating"
+        ? answers[current.key] !== null
+        : current.type === "multi"
+          ? answers[current.key].length > 0
+          : String(answers[current.key]).trim() !== ""
     );
 
   // פונקציה לטיפול בבחירה מרובה
@@ -263,10 +281,10 @@ export default function SleepForm({ onLogout }) {
         {(current.type === "select" || current.type === "multi") && (
           <div className="flex flex-col gap-2 w-full">
             {current.options.map((opt) => {
-              const isSelected = current.type === "multi" 
+              const isSelected = current.type === "multi"
                 ? answers[current.key].includes(opt.value)
                 : answers[current.key] === opt.value;
-              
+
               return (
                 <button key={opt.value} onClick={() => current.type === "multi" ? toggleMultiSelect(opt.value) : setAnswers({ ...answers, [current.key]: opt.value })}
                   className={"rounded-xl py-3 px-4 font-medium text-right transition-all border " + (isSelected ? "bg-indigo-600 text-white border-indigo-600 shadow-md" : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50")}>

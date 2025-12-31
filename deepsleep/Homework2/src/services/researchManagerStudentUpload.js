@@ -9,14 +9,16 @@ import {
   query,
   serverTimestamp,
   where,
+  collectionGroup
 } from "firebase/firestore";
 
 /**
  * בודק האם שם משתמש כבר תפוס במערכת (עבור תפקיד סטודנט)
+ * משתמש ב-Collection Group Query כדי לבדוק בכל ההיררכיה
  */
 async function isStudentUsernameTaken(username) {
   const q = query(
-    collection(db, "users"),
+    collectionGroup(db, "users"),
     where("role", "==", "student"),
     where("username", "==", username),
     limit(1)
@@ -27,32 +29,38 @@ async function isStudentUsernameTaken(username) {
 }
 
 /**
- * יצירת תלמיד חדש ב-Database
- * המזהה (ID) נבנה בצורה: Student-className-username
+ * יצירת תלמיד חדש ב-Database בהיררכיה החדשה
+ * experiments/{expId}/classes/{classId}/users/{studentId}
  */
-export async function researchManagerCreateStudent({ username, className, password }) {
-  const trimmedUsername = username.trim();
-  const trimmedClassName = className.trim();
-  const trimmedPassword = password.trim();
+export async function researchManagerCreateStudent({ experimentId, classId, username, className, password }) {
+  const trimmedExpId = experimentId?.trim();
+  const trimmedClassId = classId?.trim();
+  const trimmedUsername = username?.trim();
+  const trimmedClassName = className?.trim(); // שם ה-UI של הכיתה, אולי שונה מה-ID
+  const trimmedPassword = password?.trim();
 
-  if (!trimmedUsername || !trimmedClassName || !trimmedPassword) {
-    throw new Error("חובה למלא: שם משתמש, כיתה, סיסמה");
+  if (!trimmedExpId || !trimmedClassId || !trimmedUsername || !trimmedClassName || !trimmedPassword) {
+    throw new Error("חובה למלא: מזהה ניסוי, מזהה כיתה, שם משתמש, שם כיתה, סיסמה");
   }
 
   const taken = await isStudentUsernameTaken(trimmedUsername);
   if (taken) {
-    throw new Error("שם המשתמש כבר קיים");
+    throw new Error("שם המשתמש כבר קיים במערכת");
   }
 
   // יצירת ה-ID המותאם אישית
-  const customId = `Student-${trimmedClassName}-${trimmedUsername}`;
-  const studentDocRef = doc(db, "users", customId);
+  const customId = `Student-${trimmedClassId}-${trimmedUsername}`;
+  
+  // בניית הנתיב החדש
+  const studentDocRef = doc(db, "experiments", trimmedExpId, "classes", trimmedClassId, "users", customId);
 
   await setDoc(studentDocRef, {
     role: "student",
     username: trimmedUsername,
-    className: trimmedClassName,
     password: trimmedPassword,
+    className: trimmedClassName, // שומרים גם את השם לקריאות
+    experimentId: trimmedExpId,  // Context for easy login lookup
+    classId: trimmedClassId,     // Context for easy login lookup
     createdAt: serverTimestamp(),
   });
 
@@ -61,16 +69,18 @@ export async function researchManagerCreateStudent({ username, className, passwo
 
 /**
  * מחיקת תלמיד מה-Database
- * מקבל את שם הכיתה ושם המשתמש כדי לבנות את ה-ID המדויק
  */
-export async function researchManagerDeleteStudent(className, username) {
+export async function researchManagerDeleteStudent(experimentId, classId, username) {
   try {
+    const trimmedExpId = experimentId.trim();
+    const trimmedClassId = classId.trim();
     const trimmedUsername = username.trim();
-    const trimmedClassName = className.trim();
     
     // בניית ה-ID המדויק כפי שנשמר ביצירה
-    const customId = `Student-${trimmedClassName}-${trimmedUsername}`;
-    const studentDocRef = doc(db, "users", customId);
+    const customId = `Student-${trimmedClassId}-${trimmedUsername}`;
+    
+    // בניית הנתיב המלא למחיקה
+    const studentDocRef = doc(db, "experiments", trimmedExpId, "classes", trimmedClassId, "users", customId);
 
     // ביצוע המחיקה
     await deleteDoc(studentDocRef);
