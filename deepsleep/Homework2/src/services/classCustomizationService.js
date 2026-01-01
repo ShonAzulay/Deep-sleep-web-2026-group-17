@@ -7,7 +7,8 @@ import {
   where,
   writeBatch,
   doc,
-  serverTimestamp
+  serverTimestamp,
+  collectionGroup
 } from "firebase/firestore";
 
 // Helper to get collection refs
@@ -30,42 +31,63 @@ export async function submitQuestionRequest(experimentId, classId, questionText)
 /**
  * שולף את כל השאלות הממתינות לאישור עבור כיתה מסוימת
  */
-export async function fetchPendingQuestions(experimentId, classId) {
+/**
+ * שולף את כל השאלות הממתינות מכל הכיתות ומכל הניסויים
+ * משתמש ב-Collection Group Query
+ */
+export async function fetchPendingQuestions() {
   const q = query(
-    getRequestsCol(experimentId, classId),
+    collectionGroup(db, "questionRequests"),
     where("status", "==", "pending")
   );
 
   const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return snap.docs.map(d => {
+    // היררכיה: experiments/{expId}/classes/{classId}/questionRequests/{docId}
+    const classRef = d.ref.parent.parent;
+    const expRef = classRef.parent.parent;
+
+    return {
+      id: d.id,
+      ...d.data(),
+      // שליפת הקשר (Context) מהנתיב כדי שנדע מאיפה זה הגיע
+      classId: classRef.id,
+      experimentId: expRef.id,
+      path: d.ref.path // שומרים את הנתיב המלא לשימוש בעדכון
+    };
+  });
 }
 
 /**
- * אישור רשימת שאלות (כולל עריכה)
- * @param {string} experimentId 
- * @param {string} classId 
- * @param {Array<{originalId: string, finalText: string}>} approvedQuestionsList 
+ * אישור רשימת שאלות (כולל עריכה וסיווג)
+ * מקבל את המידע המלא (כולל classId ו-experimentId) מתוך האובייקט של השאלה עצמה
  */
-export async function approveQuestions(experimentId, classId, approvedQuestionsList) {
+export async function approveQuestions(approvedQuestionsList) {
   const batch = writeBatch(db);
 
   for (const item of approvedQuestionsList) {
-    const { originalId, finalText } = item;
+    const { originalId, finalText, category, classId, experimentId, type, options } = item;
 
-    // 1. יצירת השאלה ב-activeQuestions
-    // משתמשים ב-doc() בלי ID כדי לקבל ID אוטומטי חדש
-    const newQuestionRef = doc(getActiveQuestionsCol(experimentId, classId));
+    // וודא שיש לנו את כל המידע הדרוש
+    if (!classId || !experimentId) {
+      console.warn("Missing context for question approval", item);
+      continue;
+    }
+
+    // 1. יצירת השאלה ב-activeQuestions של הכיתה הספציפית
+    const newQuestionRef = doc(collection(db, "experiments", experimentId, "classes", classId, "activeQuestions"));
 
     batch.set(newQuestionRef, {
       text: finalText,
+      category: category || "general",
+      type: type || "text", // 'text' | 'select' | 'multi'
+      options: options || [], // Array of strings if select/multi
       createdAt: serverTimestamp(),
       originRequestId: originalId,
-      isVisible: true // ברירת מחדל
+      isVisible: true
     });
 
-    // 2. עדכון הסטטוס של הבקשה המקורית ל-approved
-    // או אפשר למחוק: batch.delete(requestRef);
-    // נבחר לעדכן סטטוס כדי לשמור היסטוריה
+    // 2. עדכון הסטטוס של הבקשה המקורית
     const requestRef = doc(db, "experiments", experimentId, "classes", classId, "questionRequests", originalId);
     batch.update(requestRef, {
       status: "approved",

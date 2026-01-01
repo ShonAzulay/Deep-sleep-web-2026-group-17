@@ -12,7 +12,9 @@ export default function TeacherDashboard({ onLogout }) {
   const [message, setMessage] = useState("");
 
   const [sleepData, setSleepData] = useState([]);
-  const [questionText, setQuestionText] = useState("");
+
+  // 5 Questions Slots
+  const [questions, setQuestions] = useState(["", "", "", "", ""]);
 
   // Context from Session
   const [context, setContext] = useState(null);
@@ -48,18 +50,29 @@ export default function TeacherDashboard({ onLogout }) {
   }
 
   // פונקציה לשמירת שאלות
-  async function handleSaveQuestion() {
+  async function handleSaveQuestions() {
     if (!context?.experimentId || !context?.classId) {
       alert("חסר מידע על הניסוי/כיתה. אנא התחבר מחדש.");
       return;
     }
 
+    const filledQuestions = questions.filter(q => q.trim() !== "");
+    if (filledQuestions.length === 0) return;
+
     setLoading(true);
     setMessage("");
+
     try {
-      await submitQuestionRequest(context.experimentId, context.classId, questionText);
-      setMessage("השאלה נשלחה בהצלחה וממתינה לאישור.");
-      setQuestionText("");
+      // Shorthand: Send all non-empty questions
+      // We could use Promise.all to send parallel
+      const promises = filledQuestions.map(qText =>
+        submitQuestionRequest(context.experimentId, context.classId, qText)
+      );
+
+      await Promise.all(promises);
+
+      setMessage(`${filledQuestions.length} שאלות נשלחו בהצלחה וממתינות לאישור.`);
+      setQuestions(["", "", "", "", ""]); // Reset
     } catch (e) {
       alert(e.message);
     } finally {
@@ -86,19 +99,31 @@ export default function TeacherDashboard({ onLogout }) {
           </p>
 
           <div className="space-y-3">
-            <textarea
-              placeholder="כתוב כאן את השאלה..."
-              value={questionText}
-              onChange={(e) => setQuestionText(e.target.value)}
-              className="w-full rounded-xl bg-indigo-950/50 border border-indigo-500/50 px-4 py-3 text-white placeholder-indigo-400 focus:ring-2 focus:ring-emerald-400 outline-none min-h-[100px]"
-            />
+            {questions.map((q, idx) => (
+              <div key={idx} className="relative">
+                <span className="absolute -top-2 right-3 bg-indigo-900 text-xs text-indigo-300 px-2 rounded-full border border-indigo-500/30">
+                  שאלה {idx + 1}
+                </span>
+                <input
+                  type="text"
+                  placeholder={`הכנס את תוכן שאלה ${idx + 1}...`}
+                  value={q}
+                  onChange={(e) => {
+                    const newQs = [...questions];
+                    newQs[idx] = e.target.value;
+                    setQuestions(newQs);
+                  }}
+                  className="w-full rounded-xl bg-indigo-950/50 border border-indigo-500/50 px-4 py-3 text-white placeholder-indigo-400 focus:ring-2 focus:ring-emerald-400 outline-none mt-1"
+                />
+              </div>
+            ))}
 
             <button
-              onClick={handleSaveQuestion}
-              disabled={loading || !questionText.trim()}
+              onClick={handleSaveQuestions}
+              disabled={loading || questions.every(q => !q.trim())}
               className="w-full rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 py-3 font-bold text-white disabled:opacity-50 mt-4 transition-all hover:scale-[1.02] shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(20,184,166,0.5)]"
             >
-              {loading ? "שולח..." : "שלח שאלה לאישור"}
+              {loading ? "שולח..." : "שלח שאלות לאישור"}
             </button>
 
             {message && (
@@ -161,14 +186,14 @@ export default function TeacherDashboard({ onLogout }) {
         </div>
         <div className="space-y-6">
           <button onClick={handleFetchData} className="w-full rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 py-6 text-xl font-bold text-white shadow-[0_0_15px_rgba(99,102,241,0.3)] hover:shadow-[0_0_25px_rgba(99,102,241,0.5)] hover:scale-[1.02] transition-all group">
-             📊 צפייה בנתונים וייצוא
+            📊 צפייה בנתונים וייצוא
           </button>
           <button onClick={() => setView("addQuestions")} className="w-full rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 py-6 text-xl font-bold text-white shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(20,184,166,0.5)] hover:scale-[1.02] transition-all group">
-             📝 הצעת שאלה חדשה
+            📝 הצעת שאלה חדשה
           </button>
         </div>
       </GlassCard>
-       {/* Footer Branding */}
+      {/* Footer Branding */}
       <div className="absolute bottom-4 text-emerald-500/30 text-xs font-mono tracking-widest pointer-events-none z-20">
         DEEP-SLEEP LABS // TEACHER PORTAL
       </div>

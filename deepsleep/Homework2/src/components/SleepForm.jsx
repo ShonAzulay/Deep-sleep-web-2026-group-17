@@ -1,21 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { saveSleepEntry, getUserSubmissionCount } from "../services/sleepEntriesService";
+import { fetchActiveQuestions } from "../services/classCustomizationService";
 import GalacticGame from "./GalacticGame";
+import StudentWelcomeScreen from "./StudentWelcomeScreen";
 
 import SpaceLayout from './ui/SpaceLayout';
 import GlassCard from './ui/GlassCard';
 
 export default function SleepForm({ onLogout }) {
-  // ... existing logic ...
-  // 1. Updated Questions Format
-  const steps = [
+  // 1. Static Steps Definition
+  const STATIC_STEPS = [
     {
       key: "grade",
       title: "אני בכיתה",
       type: "select",
       options: [
-        { value: "z", label: "ז" }, { value: "h", label: "ח" }, 
-        { value: "t", label: "ט" }, { value: "y", label: "י" }, 
+        { value: "z", label: "ז" }, { value: "h", label: "ח" },
+        { value: "t", label: "ט" }, { value: "y", label: "י" },
         { value: "ya", label: "י\"א" }, { value: "yb", label: "י\"ב" }
       ],
     },
@@ -124,16 +125,36 @@ export default function SleepForm({ onLogout }) {
     }
   ];
 
+  // "welcome" | "form" | "success" (handled by step logic mostly)
+  const [view, setView] = useState("welcome");
   const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState({
-    grade: "", gender: "", bed_entry_time: "", eye_close_decision: "",
-    pre_sleep_activity: [], time_to_fall_asleep: "", wakeups_count: "",
-    awake_duration_total: "", wake_up_time: "", wake_up_method: "",
-    total_sleep_estimate: "", notes: ""
-  });
+  const [answers, setAnswers] = useState({}); // Dynamic answers map
+  const [dynamicQuestions, setDynamicQuestions] = useState([]);
+
+  // Merge Static steps with Dynamic questions (except Notes, which should be last)
+  const steps = useMemo(() => {
+    // We want Notes to be last. Find index of notes.
+    const notesIndex = STATIC_STEPS.findIndex(s => s.key === "notes");
+    const beforeNotes = STATIC_STEPS.slice(0, notesIndex);
+    const notesStep = STATIC_STEPS[notesIndex];
+
+    // Remap dynamic questions to Step format
+    const mappedDynamic = dynamicQuestions.map(q => ({
+      key: `custom_${q.id}`,
+      title: q.text,
+      type: q.type || "text",
+      options: (q.type === "select" || q.type === "multi")
+        ? (q.options || []).map(opt => ({ value: opt, label: opt }))
+        : [],
+      placeholder: q.type === "text" ? "כתוב את תשובתך כאן..." : undefined,
+      isCustom: true
+    }));
+
+    return [...beforeNotes, ...mappedDynamic, notesStep];
+  }, [dynamicQuestions]);
 
   const [context, setContext] = useState(null);
-  const [submissionCount, setSubmissionCount] = useState(0); 
+  const [submissionCount, setSubmissionCount] = useState(0);
   const [showGame, setShowGame] = useState(false);
 
   useEffect(() => {
@@ -142,10 +163,16 @@ export default function SleepForm({ onLogout }) {
       if (userStr) {
         const user = JSON.parse(userStr);
         setContext(user);
-        // Fetch submission count for progress bar
+
+        // Fetch submission count
         if (user.experimentId && user.classId && user.id) {
-            getUserSubmissionCount(user.experimentId, user.classId, user.id)
-                .then(count => setSubmissionCount(count));
+          getUserSubmissionCount(user.experimentId, user.classId, user.id)
+            .then(count => setSubmissionCount(count));
+
+          // Fetch Dynamic Questions for this class
+          fetchActiveQuestions(user.experimentId, user.classId)
+            .then(qs => setDynamicQuestions(qs))
+            .catch(err => console.error("Failed to fetch questions", err));
         }
       }
     } catch (e) { console.error("Error parsing user context", e); }
@@ -159,8 +186,8 @@ export default function SleepForm({ onLogout }) {
       }
       saveSleepEntry(context.experimentId, context.classId, context.id, answers)
         .then(() => {
-            // Update local count immediately to show progress
-            setSubmissionCount(prev => prev + 1);
+          // Update local count immediately to show progress
+          setSubmissionCount(prev => prev + 1);
         })
         .catch((err) => console.error("Failed to save sleep entry", err));
     }
@@ -168,11 +195,11 @@ export default function SleepForm({ onLogout }) {
 
   // If Game is active, show overlay
   if (showGame) {
-      return (
-        <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4">
-            <GalacticGame dayCount={submissionCount} onClose={() => setShowGame(false)} />
-        </div>
-      );
+    return (
+      <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4">
+        <GalacticGame dayCount={submissionCount} onClose={() => setShowGame(false)} />
+      </div>
+    );
   }
 
   // Success Screen
@@ -181,70 +208,77 @@ export default function SleepForm({ onLogout }) {
       <SpaceLayout>
         {/* Success Glass Card */}
         <GlassCard className="w-full max-w-lg text-center" animateFloat={true} glowColor="indigo">
-            <div className="mb-6 flex justify-center">
-                <div className="w-20 h-20 rounded-full bg-green-500/20 border-2 border-green-400 flex items-center justify-center shadow-[0_0_20px_rgba(74,222,128,0.4)]">
-                    <span className="text-4xl">✅</span>
-                </div>
+          <div className="mb-6 flex justify-center">
+            <div className="w-20 h-20 rounded-full bg-green-500/20 border-2 border-green-400 flex items-center justify-center shadow-[0_0_20px_rgba(74,222,128,0.4)]">
+              <span className="text-4xl">✅</span>
             </div>
-            
-            <h2 className="text-3xl font-bold mb-2">כל הכבוד!</h2>
-            <p className="text-indigo-300 mb-8">היומן היומי נשמר בהצלחה.</p>
+          </div>
 
-            <div className="space-y-4">
-                 <div className="p-4 rounded-xl bg-indigo-900/40 border border-indigo-500/30 mb-6">
-                    <p className="text-sm text-indigo-200 mb-2">התקדמות המשימה שלך</p>
-                    <div className="flex justify-between items-end mb-1">
-                         <span className="font-mono font-bold text-cyan-400">DAY {submissionCount} / 14</span>
-                         <span className="text-xs text-indigo-400">{Math.round((submissionCount/14)*100)}%</span>
-                    </div>
-                    <div className="h-2 w-full bg-indigo-950 rounded-full overflow-hidden">
-                        <div 
-                            className="h-full bg-gradient-to-r from-green-400 to-cyan-500 shadow-[0_0_10px_#00f3ff]"
-                            style={{ width: `${Math.min(100, (submissionCount/14)*100)}%` }}
-                        />
-                    </div>
-                 </div>
+          <h2 className="text-3xl font-bold mb-2">כל הכבוד!</h2>
+          <p className="text-indigo-300 mb-8">היומן היומי נשמר בהצלחה.</p>
 
-                <button 
-                  onClick={() => setShowGame(true)}
-                  className="w-full py-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold tracking-wide shadow-[0_0_20px_rgba(236,72,153,0.4)] hover:scale-105 transition-transform animate-pulse"
-                >
-                  🚀 שחק במשחק החלל (שלב {submissionCount})
-                </button>
-
-                <button
-                  onClick={() => {
-                    setStep(0);
-                    setAnswers({
-                      grade: "", gender: "", bed_entry_time: "", eye_close_decision: "",
-                      pre_sleep_activity: [], time_to_fall_asleep: "", wakeups_count: "",
-                      awake_duration_total: "", wake_up_time: "", wake_up_method: "",
-                      total_sleep_estimate: "", notes: ""
-                    });
-                  }}
-                  className="w-full py-3 rounded-xl border border-white/10 hover:bg-white/5 text-indigo-200 transition-colors"
-                >
-                  למלא שוב (לצורך בדיקה)
-                </button>
-                
-                <button onClick={onLogout} className="w-full py-3 text-sm text-indigo-400 hover:text-white transition-colors">
-                  התנתק וחזור להתחלה
-                </button>
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl bg-indigo-900/40 border border-indigo-500/30 mb-6">
+              <p className="text-sm text-indigo-200 mb-2">התקדמות המשימה שלך</p>
+              <div className="flex justify-between items-end mb-1">
+                <span className="font-mono font-bold text-cyan-400">DAY {submissionCount} / 14</span>
+                <span className="text-xs text-indigo-400">{Math.round((submissionCount / 14) * 100)}%</span>
+              </div>
+              <div className="h-2 w-full bg-indigo-950 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-green-400 to-cyan-500 shadow-[0_0_10px_#00f3ff]"
+                  style={{ width: `${Math.min(100, (submissionCount / 14) * 100)}%` }}
+                />
+              </div>
             </div>
+
+            <button
+              onClick={() => setShowGame(true)}
+              className="w-full py-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold tracking-wide shadow-[0_0_20px_rgba(236,72,153,0.4)] hover:scale-105 transition-transform animate-pulse"
+            >
+              🚀 שחק במשחק החלל (שלב {submissionCount})
+            </button>
+
+            <button
+              onClick={() => {
+                setStep(0);
+                setAnswers({}); // Reset all
+              }}
+              className="w-full py-3 rounded-xl border border-white/10 hover:bg-white/5 text-indigo-200 transition-colors"
+            >
+              למלא שוב (לצורך בדיקה)
+            </button>
+
+            <button onClick={onLogout} className="w-full py-3 text-sm text-indigo-400 hover:text-white transition-colors">
+              התנתק וחזור להתחלה
+            </button>
+          </div>
         </GlassCard>
-      </SpaceLayout>
+      </SpaceLayout >
     );
   }
 
+  // ---------------- WELCOME VIEW ----------------
+  if (view === "welcome") {
+    return (
+      <StudentWelcomeScreen
+        onStart={() => setView("form")}
+        onLogout={onLogout}
+        submissionCount={submissionCount}
+      />
+    );
+  }
+
+  // ---------------- FORM VIEW ----------------
   const current = steps[step];
   const progress = Math.round(((step + 1) / steps.length) * 100);
 
   const canGoNext = current.optional || (
-    current.type === "multi" ? answers[current.key]?.length > 0 : String(answers[current.key] || "").trim() !== ""
+    current.type === "multi" ? (answers[current.key] && answers[current.key].length > 0) : String(answers[current.key] || "").trim() !== ""
   );
 
   const toggleMultiSelect = (val) => {
-    const currentList = answers[current.key];
+    const currentList = answers[current.key] || [];
     const newList = currentList.includes(val) ? currentList.filter(i => i !== val) : [...currentList, val];
     setAnswers({ ...answers, [current.key]: newList });
   };
@@ -259,8 +293,8 @@ export default function SleepForm({ onLogout }) {
           <circle cx="50" cy="50" r="40" fill="url(#moonGradient)" />
           <defs>
             <radialGradient id="moonGradient" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(30 30) rotate(51.3402) scale(64.0312)">
-              <stop stopColor="#F6F6F6"/>
-              <stop offset="1" stopColor="#9CA3AF"/>
+              <stop stopColor="#F6F6F6" />
+              <stop offset="1" stopColor="#9CA3AF" />
             </radialGradient>
           </defs>
         </svg>
@@ -273,16 +307,16 @@ export default function SleepForm({ onLogout }) {
 
       {/* 🔵 TOP BAR: 14-DAY PROGRESS */}
       <div className="absolute top-0 left-0 right-0 p-4 z-30 flex justify-center pointer-events-none">
-         <div className="glass-panel px-6 py-2 rounded-full flex gap-4 items-center shadow-lg transform scale-90 sm:scale-100">
-             <span className="text-xs font-bold text-cyan-300 tracking-wider">MISSION PROGRESS</span>
-             <div className="w-32 h-2 bg-indigo-950 rounded-full overflow-hidden border border-indigo-500/30">
-                 <div 
-                    className="h-full bg-cyan-400 shadow-[0_0_10px_#00f3ff]" 
-                    style={{ width: `${Math.min(100, (submissionCount/14)*100)}%` }} 
-                 />
-             </div>
-             <span className="text-xs font-mono text-white">{submissionCount}/14 DAYS</span>
-         </div>
+        <div className="glass-panel px-6 py-2 rounded-full flex gap-4 items-center shadow-lg transform scale-90 sm:scale-100">
+          <span className="text-xs font-bold text-cyan-300 tracking-wider">MISSION PROGRESS</span>
+          <div className="w-32 h-2 bg-indigo-950 rounded-full overflow-hidden border border-indigo-500/30">
+            <div
+              className="h-full bg-cyan-400 shadow-[0_0_10px_#00f3ff]"
+              style={{ width: `${Math.min(100, (submissionCount / 14) * 100)}%` }}
+            />
+          </div>
+          <span className="text-xs font-mono text-white">{submissionCount}/14 DAYS</span>
+        </div>
       </div>
     </>
   );
@@ -297,7 +331,7 @@ export default function SleepForm({ onLogout }) {
             <span className="text-xs font-mono text-indigo-300">{progress}%</span>
           </div>
           <div className="h-1 w-full bg-indigo-900/50 rounded-full overflow-hidden">
-            <div 
+            <div
               className="h-full bg-gradient-to-r from-cyan-400 to-indigo-500 shadow-[0_0_10px_#00f3ff]"
               style={{ width: `${progress}%`, transition: 'width 0.5s ease' }}
             />
@@ -311,30 +345,30 @@ export default function SleepForm({ onLogout }) {
 
         {/* Dynamic Input Area */}
         <div className="min-h-[120px] mb-8">
-          
+
           {/* Choice / Multi Buttons */}
           {(current.type === "select" || current.type === "multi") && (
             <div className="grid grid-cols-1 gap-3">
               {current.options.map((opt) => {
-                const isSelected = current.type === "multi" 
-                  ? answers[current.key].includes(opt.value) 
+                const isSelected = current.type === "multi"
+                  ? (answers[current.key] || []).includes(opt.value)
                   : answers[current.key] === opt.value;
 
                 return (
-                  <button 
-                    key={opt.value} 
+                  <button
+                    key={opt.value}
                     onClick={() => {
                       if (current.type === "multi") toggleMultiSelect(opt.value);
                       else {
                         setAnswers({ ...answers, [current.key]: opt.value });
                         // Auto-advance with slight delay for visual feedback
-                        setTimeout(() => setStep(step + 1), 200); 
+                        setTimeout(() => setStep(step + 1), 200);
                       }
                     }}
                     className={`
                       relative overflow-hidden rounded-xl py-4 px-6 font-medium text-right transition-all duration-300 border
-                      ${isSelected 
-                        ? "bg-indigo-600/80 border-cyan-400 text-white neon-border shadow-[0_0_15px_rgba(0,243,255,0.4)] translate-x-1" 
+                      ${isSelected
+                        ? "bg-indigo-600/80 border-cyan-400 text-white neon-border shadow-[0_0_15px_rgba(0,243,255,0.4)] translate-x-1"
                         : "bg-white/5 border-white/10 text-indigo-100 hover:bg-white/10 hover:border-indigo-400 hover:scale-[1.02]"
                       }
                     `}
@@ -368,18 +402,30 @@ export default function SleepForm({ onLogout }) {
         {/* Navigation Actions */}
         <div className="flex flex-col gap-3">
           {(current.type === "multi" || current.type === "text") && (
-             <button 
-               onClick={() => canGoNext && setStep(step + 1)} 
-               disabled={!canGoNext}
-               className="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-500 text-white font-bold tracking-wide shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-[0_0_20px_rgba(0,243,255,0.4)] hover:-translate-y-1 transition-all"
-             >
-               המשך לשלב הבא ➜
-             </button>
+            <button
+              onClick={() => canGoNext && setStep(step + 1)}
+              disabled={!canGoNext}
+              className="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-500 text-white font-bold tracking-wide shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-[0_0_20px_rgba(0,243,255,0.4)] hover:-translate-y-1 transition-all"
+            >
+              המשך לשלב הבא ➜
+            </button>
           )}
-          
-          {step > 0 && (
-            <button 
-              onClick={() => setStep(step - 1)} 
+
+          {/* Modified back button logic */}
+          {step > 0 ? (
+            <button
+              onClick={() => setStep(step - 1)}
+              className="text-sm text-indigo-400 hover:text-cyan-300 transition-colors py-2"
+            >
+              חזרה אחורה
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setStep(0);
+                setAnswers({});
+                setView("welcome"); // Back to welcome
+              }}
               className="text-sm text-indigo-400 hover:text-cyan-300 transition-colors py-2"
             >
               חזרה אחורה
@@ -388,7 +434,7 @@ export default function SleepForm({ onLogout }) {
         </div>
 
       </GlassCard>
-      
+
       {/* Footer Branding */}
       <div className="absolute bottom-4 text-indigo-500/30 text-xs font-mono tracking-widest pointer-events-none z-20">
         DEEP-SLEEP LABS // V2.0
