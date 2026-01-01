@@ -155,15 +155,39 @@ export default function TeacherDashboard({ onLogout }) {
           <div className="max-h-96 overflow-auto border border-indigo-500/30 rounded-xl mb-6 custom-scrollbar bg-indigo-950/30">
             <table className="w-full text-right border-collapse text-indigo-100">
               <thead className="bg-indigo-900/80 sticky top-0 text-white backdrop-blur-sm">
-                <tr><th className="p-3 border-b border-indigo-500/30">שעות שינה</th><th className="p-3 border-b border-indigo-500/30">איכות שינה</th><th className="p-3 border-b border-indigo-500/30">פעילות שבוצעה לפני השינה</th></tr>
+                <tr>
+                  <th className="p-3 border-b border-indigo-500/30">שעות שינה</th>
+                  <th className="p-3 border-b border-indigo-500/30">פעילות שבוצעה לפני השינה</th>
+                </tr>
               </thead>
               <tbody>
-                {sleepData.length === 0 ? <tr><td colSpan="3" className="p-4 text-center text-indigo-400">אין נתונים</td></tr> :
-                  sleepData.map((d, i) => (
-                    <tr key={i} className="hover:bg-white/5 border-b border-indigo-500/20 transition-colors">
-                      <td className="p-3 border-l border-indigo-500/20">{d.hours}</td><td className="p-3 border-l border-indigo-500/20">{d.quality}</td><td className="p-3">{Array.isArray(d.pre_sleep_activity) ? d.pre_sleep_activity.join(", ") : d.pre_sleep_activity}</td>
-                    </tr>
-                  ))}
+                {sleepData.length === 0 ? <tr><td colSpan="2" className="p-4 text-center text-indigo-400">אין נתונים</td></tr> :
+                  sleepData.map((d, i) => {
+                    // Mappings for display
+                    const hoursMap = {
+                      "under_5": "פחות מ-5", "5_6": "5-6", "6_7": "6-7",
+                      "7_8": "7-8", "8_9": "8-9", "over_9": "מעל 9"
+                    };
+                    const actMap = {
+                      "phone": "טלפון", "computer": "מחשב", "tablet": "טאבלט",
+                      "book": "ספר", "music": "מוזיקה", "other": "אחר"
+                    };
+
+                    // Format Activity
+                    let activityDisplay = d.pre_sleep_activity;
+                    if (Array.isArray(d.pre_sleep_activity)) {
+                      activityDisplay = d.pre_sleep_activity.map(a => actMap[a] || a).join(", ");
+                    } else if (typeof d.pre_sleep_activity === 'string') {
+                      activityDisplay = actMap[d.pre_sleep_activity] || d.pre_sleep_activity;
+                    }
+
+                    return (
+                      <tr key={i} className="hover:bg-white/5 border-b border-indigo-500/20 transition-colors">
+                        <td className="p-3 border-l border-indigo-500/20">{hoursMap[d.total_sleep_estimate] || d.total_sleep_estimate || "-"}</td>
+                        <td className="p-3">{activityDisplay || "-"}</td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>
