@@ -9,6 +9,8 @@ import {
   approveQuestions
 } from "../services/classCustomizationService";
 import { researchManagerCreateTeacher } from "../services/teacherManagementService";
+import { db } from "../services/firebase"; // Import db from services
+import { collection, getDocs } from "firebase/firestore"; // Import firestore functions
 
 import SpaceLayout from './ui/SpaceLayout';
 import GlassCard from './ui/GlassCard';
@@ -28,6 +30,9 @@ export default function ResearchManagerDashboard({ onLogout }) {
   // Context State
   const [experimentId, setExperimentId] = useState("Exp1");
   const [classId, setClassId] = useState("ClassA");
+
+  // Classes State
+  const [classesList, setClassesList] = useState([]);
 
   // Student Management State
   const [studentUsername, setStudentUsername] = useState("");
@@ -63,7 +68,7 @@ export default function ResearchManagerDashboard({ onLogout }) {
   const [selectedIds, setSelectedIds] = useState([]);
 
   const canSubmitCreate = studentUsername.trim() && studentPassword.trim() && studentSchoolName.trim() && studentGrade.trim() && studentClassNum.trim() && !loading;
-  const canSubmitDelete = studentUsername.trim() !== "" && !loading; // Delete only needs username now (search is global/smart, or we need classId input too - sticking to simple)
+  const canSubmitDelete = studentUsername.trim() !== "" && !loading;
   const canSubmitCreateTeacher = teacherName.trim() && teacherEmail.trim() && teacherPassword.trim() && schoolName.trim() && gradeLevel.trim() && classNumber.trim() && !loading;
 
   // --- Effects ---
@@ -71,7 +76,25 @@ export default function ResearchManagerDashboard({ onLogout }) {
     if (view === "questions") {
       loadQuestions();
     }
-  }, [view]); // Removed dependency on expId/classId for questions
+    if (view === "classes") {
+      fetchClasses();
+    }
+  }, [view, experimentId]);
+
+  async function fetchClasses() {
+    setLoading(true);
+    try {
+      const colRef = collection(db, "experiments", experimentId, "classes");
+      const snap = await getDocs(colRef);
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setClassesList(list);
+    } catch (err) {
+      console.error(err);
+      setError("שגיאה בטעינת כיתות. וודא שה ID של הניסוי נכון.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function loadQuestions() {
     setLoadingQ(true);
@@ -97,31 +120,61 @@ export default function ResearchManagerDashboard({ onLogout }) {
     }
   }
 
-  // --- Handlers ---
+  // Create Class State
+  const [newSchoolName, setNewSchoolName] = useState("");
+  const [newGrade, setNewGrade] = useState("");
+  const [newClassNum, setNewClassNum] = useState("");
 
-  async function handleCreateStudent() {
-    setError(""); setMessage(""); setLoading(true);
+  const canSubmitCreateClass = newSchoolName.trim() && newGrade && newClassNum;
+
+  async function handleCreateClass() {
+    if (!canSubmitCreateClass) return;
+    setLoading(true);
     try {
-      const newId = await researchManagerCreateStudent({
-        experimentId,
-        username: studentUsername,
-        password: studentPassword,
-        schoolName: studentSchoolName,
-        grade: studentGrade,
-        classNum: studentClassNum
+      // Dynamic import to allow db access if not available in scope, or just use existing db import
+      const { doc, setDoc, serverTimestamp } = await import("firebase/firestore");
+
+      const sanitize = (str) => str.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-\u0590-\u05FF]/g, '');
+      const safeSchool = sanitize(newSchoolName);
+      const safeGrade = sanitize(newGrade);
+      const safeClassNum = sanitize(newClassNum);
+      const newClassId = `${safeSchool}_${safeGrade}_${safeClassNum}`;
+
+      await setDoc(doc(db, "experiments", experimentId, "classes", newClassId), {
+        schoolName: newSchoolName,
+        grade: newGrade,
+        classNum: newClassNum,
+        createdAt: serverTimestamp(),
+        experimentId: experimentId
       });
-      setMessage(`תלמיד נוצר בהצלחה (id: ${newId})`);
-      setStudentUsername(""); setStudentPassword(""); setStudentSchoolName(""); setStudentGrade(""); setStudentClassNum("");
-    } catch (e) { setError(e?.message || "שגיאה ביצירת תלמיד"); } finally { setLoading(false); }
+
+      setMessage(`כיתה ${newClassId} נוצרה בהצלחה!`);
+      setNewSchoolName(""); setNewGrade(""); setNewClassNum("");
+      fetchClasses(); // Refresh list
+    } catch (err) {
+      console.error(err);
+      setError("שגיאה ביצירת כיתה");
+    } finally {
+      setLoading(false);
+    }
   }
+
+  // --- Handlers ---
+  const handleCopyLink = (cls) => {
+    const origin = window.location.origin;
+    const url = `${origin}/?experimentId=${experimentId}&classId=${cls.id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      alert(`הקישור לכיתה הועתק בהצלחה!\n${url}`);
+    }).catch(err => {
+      console.error("Failed to copy", err);
+      prompt("העתק את הקישור ידנית:", url);
+    });
+  };
 
   async function handleDeleteStudent() {
     if (!window.confirm(`האם אתה בטוח שברצונך למחוק את ${studentUsername}?`)) return;
     setError(""); setMessage(""); setLoading(true);
     try {
-      // NOTE: Deleting requires ClassID. For now, we reuse the hierarchy fields if filled, or alert user. 
-      // Simplification: We assume user fills the hierarchy fields for delete too, or we just reconstruct the ID.
-      // Let's rely on the inputs being filled.
       const sanitize = (str) => str.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-\u0590-\u05FF]/g, '');
       const derivedClassId = `${sanitize(studentSchoolName)}_${sanitize(studentGrade)}_${sanitize(studentClassNum)}`;
 
@@ -152,11 +205,8 @@ export default function ResearchManagerDashboard({ onLogout }) {
     if (selectedIds.length === 0) return;
     setLoading(true);
     try {
-      // Build the list of approved questions with their FINAL (edited) text
       const questionsToApprove = selectedIds.map(id => {
-        // Find the full question object to get its hierarchy (classId, expId)
         const originalQ = pendingQuestions.find(q => q.id === id);
-        // Parse options if type is select
         const type = questionTypes[id] || "text";
         const optionsRaw = questionOptions[id] || "";
         const options = type === "select" ? optionsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
@@ -175,7 +225,6 @@ export default function ResearchManagerDashboard({ onLogout }) {
       await approveQuestions(questionsToApprove);
 
       setMessage(`${selectedIds.length} שאלות אושרו בהצלחה!`);
-      // Refresh list
       loadQuestions();
     } catch (e) {
       setError("שגיאה באישור השאלות");
@@ -204,7 +253,6 @@ export default function ResearchManagerDashboard({ onLogout }) {
     <div className="mb-8 relative z-10">
       <h1 className="text-3xl sm:text-4xl font-extrabold text-white mb-6 text-center drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">{title}</h1>
 
-      {/* Context Selection Bar - Simplified for Global View */}
       <div className="glass-panel p-4 rounded-xl mb-4 text-sm flex gap-3 flex-wrap border border-indigo-500/30">
         <div className="flex flex-col flex-1 min-w-[120px]">
           <label className="font-bold text-indigo-300 mb-1">Experiment ID (ליצירת משתמשים)</label>
@@ -215,7 +263,6 @@ export default function ResearchManagerDashboard({ onLogout }) {
             className="bg-indigo-950/50 border border-indigo-500/50 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-cyan-400 outline-none"
           />
         </div>
-        {/* Class ID input removed - questions are global now */}
       </div>
       {(error || message) && (
         <div className="text-center mb-4">
@@ -225,6 +272,86 @@ export default function ResearchManagerDashboard({ onLogout }) {
       )}
     </div>
   );
+
+  if (view === "classes") {
+    return (
+      <SpaceLayout>
+        <GlassCard className="w-full max-w-4xl" animateFloat={true} glowColor="cyan">
+          {renderHeader("ניהול כיתות וקישורים")}
+
+          <div className="flex justify-between items-center mb-6">
+            <p className="text-indigo-200">רשימת הכיתות בניסוי: <b>{experimentId}</b></p>
+            <button onClick={fetchClasses} className="text-cyan-400 hover:underline text-sm">רענן רשימה</button>
+          </div>
+
+          {/* Create Class Form */}
+          <div className="bg-white/5 border border-white/10 p-4 rounded-xl mb-6">
+            <h3 className="text-white font-bold mb-3 flex items-center gap-2">➕ הוספת כיתה חדשה</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <input
+                placeholder="שם בית ספר"
+                value={newSchoolName}
+                onChange={e => setNewSchoolName(e.target.value)}
+                className="bg-indigo-950/50 border border-indigo-500/30 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-cyan-400 outline-none"
+              />
+              <select
+                value={newGrade}
+                onChange={e => setNewGrade(e.target.value)}
+                className="bg-indigo-950/50 border border-indigo-500/30 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-cyan-400 outline-none"
+              >
+                <option value="" disabled>שכבה</option>
+                {["ז", "ח", "ט", "י", "יא", "יב", "יג", "יד"].map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
+              <select
+                value={newClassNum}
+                onChange={e => setNewClassNum(e.target.value)}
+                className="bg-indigo-950/50 border border-indigo-500/30 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-cyan-400 outline-none"
+              >
+                <option value="" disabled>מס'</option>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+              <button
+                onClick={handleCreateClass}
+                disabled={!canSubmitCreateClass || loading}
+                className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg py-2 disabled:opacity-50 transition-colors"
+              >
+                {loading ? "יוצר..." : "צור כיתה"}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+            {loading && <p className="text-white text-center">טוען...</p>}
+            {!loading && classesList.length === 0 && <p className="text-indigo-400 text-center py-8">לא נמצאו כיתות בניסוי זה.</p>}
+
+            {classesList.map(cls => (
+              <div key={cls.id} className="p-4 bg-white/5 border border-white/10 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-4 hover:bg-white/10 transition-colors">
+                <div className="text-right">
+                  <div className="font-bold text-white text-lg">{cls.id}</div>
+                  <div className="text-sm text-indigo-300">
+                    {cls.schoolName ? `${cls.schoolName} - ${cls.grade}'${cls.classNum}` : '(פרטים חסרים)'}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => handleCopyLink(cls)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-lg text-white font-bold hover:scale-105 transition-transform shadow-[0_0_10px_rgba(0,243,255,0.3)]"
+                >
+                  <span>🔗 העתק קישור לכיתה</span>
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8 pt-4 border-t border-indigo-500/30">
+            <button onClick={() => setView("menu")} className="w-full rounded-2xl border border-indigo-500/30 py-3 font-semibold text-indigo-200 hover:bg-white/5 transition-colors">
+              חזרה לתפריט
+            </button>
+          </div>
+        </GlassCard>
+      </SpaceLayout>
+    );
+  }
 
   if (view === "questions") {
     return (
@@ -272,7 +399,6 @@ export default function ResearchManagerDashboard({ onLogout }) {
                         ))}
                       </select>
 
-                      {/* Type and Options Config */}
                       <div className="flex gap-2 mt-2">
                         <select
                           className="w-1/3 bg-indigo-950/60 border border-indigo-500/30 rounded-lg p-2 text-xs text-indigo-200 outline-none focus:ring-2 focus:ring-cyan-400"
@@ -351,19 +477,19 @@ export default function ResearchManagerDashboard({ onLogout }) {
     );
   }
 
-  if (view === "createStudent" || view === "deleteStudent") {
-    const isDelete = view === "deleteStudent";
+  if (view === "deleteStudent") {
+    // const isDelete = view === "deleteStudent"; // Always true now
     return (
       <SpaceLayout>
         <GlassCard className="w-full max-w-md" animateFloat={true} glowColor="indigo">
-          {renderHeader(isDelete ? "מחיקת תלמיד" : "הכנסת תלמיד")}
+          {renderHeader("מחיקת תלמיד")}
 
-          <p className="mb-6 text-center text-sm text-indigo-300">{isDelete ? "הזן שם משתמש לזיהוי." : "הזן פרטים ליצירת תלמיד חדש."}</p>
+          <p className="mb-6 text-center text-sm text-indigo-300">הזן שם משתמש לזיהוי.</p>
           <div className="space-y-4">
             <input type="text" placeholder="שם משתמש (User ID)" value={studentUsername} onChange={(e) => setStudentUsername(e.target.value)} className="w-full rounded-xl bg-indigo-950/50 border border-indigo-500/50 px-4 py-3 text-white placeholder-indigo-400 focus:ring-2 focus:ring-cyan-400 outline-none" />
 
             <div className="bg-indigo-900/20 p-3 rounded-xl border border-indigo-500/20 space-y-2">
-              <p className="text-xs text-indigo-400 font-bold uppercase mb-1">שיוך לכיתה (חובה למלא במדויק)</p>
+              <p className="text-xs text-indigo-400 font-bold uppercase mb-1">שיוך לכיתה (חובה למלא במדויק למחיקה)</p>
               <input type="text" placeholder="שם בית הספר" value={studentSchoolName} onChange={(e) => setStudentSchoolName(e.target.value)} className="w-full rounded-lg bg-indigo-950/50 border border-indigo-500/30 px-3 py-2 text-sm text-white focus:ring-2 focus:ring-cyan-400 outline-none" />
               <div className="flex gap-2">
                 <input type="text" placeholder="שכבה" value={studentGrade} onChange={(e) => setStudentGrade(e.target.value)} className="flex-1 rounded-lg bg-indigo-950/50 border border-indigo-500/30 px-3 py-2 text-sm text-white focus:ring-2 focus:ring-cyan-400 outline-none" />
@@ -371,11 +497,9 @@ export default function ResearchManagerDashboard({ onLogout }) {
               </div>
             </div>
 
-            {!isDelete && (<input type="password" placeholder="סיסמה" value={studentPassword} onChange={(e) => setStudentPassword(e.target.value)} className="w-full rounded-xl bg-indigo-950/50 border border-indigo-500/50 px-4 py-3 text-white placeholder-indigo-400 focus:ring-2 focus:ring-cyan-400 outline-none" />)}
+            <button disabled={!canSubmitDelete} onClick={handleDeleteStudent} className={`w-full rounded-2xl py-3 font-semibold text-white disabled:opacity-40 shadow-lg transition-all hover:scale-[1.02] bg-gradient-to-r from-rose-600 to-red-500 hover:shadow-[0_0_20px_rgba(244,63,94,0.5)]`}>{loading ? "מבצע..." : "מחק תלמיד"}</button>
 
-            <button disabled={isDelete ? !canSubmitDelete : !canSubmitCreate} onClick={isDelete ? handleDeleteStudent : handleCreateStudent} className={`w-full rounded-2xl py-3 font-semibold text-white disabled:opacity-40 shadow-lg transition-all hover:scale-[1.02] ${isDelete ? 'bg-gradient-to-r from-rose-600 to-red-500 hover:shadow-[0_0_20px_rgba(244,63,94,0.5)]' : 'bg-gradient-to-r from-emerald-600 to-green-500 hover:shadow-[0_0_20px_rgba(16,185,129,0.5)]'}`}>{loading ? "מבצע..." : (isDelete ? "מחק תלמיד" : "צור תלמיד")}</button>
-
-            <button onClick={() => { setView("menu"); setError(""); setMessage(""); setStudentUsername(""); setStudentPassword(""); setStudentSchoolName(""); setStudentGrade(""); setStudentClassNum(""); }} className="w-full rounded-2xl border border-indigo-500/30 py-3 font-semibold text-indigo-200 hover:bg-white/5 transition-colors">חזרה לתפריט</button>
+            <button onClick={() => { setView("menu"); setError(""); setMessage(""); setStudentUsername(""); setStudentSchoolName(""); setStudentGrade(""); setStudentClassNum(""); }} className="w-full rounded-2xl border border-indigo-500/30 py-3 font-semibold text-indigo-200 hover:bg-white/5 transition-colors">חזרה לתפריט</button>
           </div>
         </GlassCard>
       </SpaceLayout>
@@ -408,10 +532,10 @@ export default function ResearchManagerDashboard({ onLogout }) {
         </div>
 
         <div className="mt-8 space-y-5 relative z-10">
+          <button type="button" onClick={() => setView("classes")} className="w-full rounded-2xl bg-gradient-to-r from-indigo-500 to-indigo-700 py-6 text-xl font-bold text-white shadow-[0_0_15px_rgba(99,102,241,0.3)] hover:shadow-[0_0_25px_rgba(99,102,241,0.5)] hover:scale-[1.02] transition-all">🏫 ניהול כיתות וקישורים</button>
           <button type="button" onClick={() => setView("stats")} className="w-full rounded-2xl bg-gradient-to-r from-indigo-600 to-blue-600 py-6 text-xl font-bold text-white shadow-[0_0_15px_rgba(99,102,241,0.3)] hover:shadow-[0_0_25px_rgba(99,102,241,0.5)] hover:scale-[1.02] transition-all">📊 צפייה בסטטיסטיקה</button>
           <button type="button" onClick={() => setView("questions")} className="w-full rounded-2xl bg-gradient-to-r from-sky-600 to-cyan-600 py-6 text-xl font-bold text-white shadow-[0_0_15px_rgba(14,165,233,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)] hover:scale-[1.02] transition-all">📝 ניהול שאלות ממתינות</button>
           <button type="button" onClick={() => setView("createTeacher")} className="w-full rounded-2xl bg-gradient-to-r from-violet-600 to-purple-500 py-6 text-xl font-bold text-white shadow-[0_0_15px_rgba(139,92,246,0.3)] hover:shadow-[0_0_25px_rgba(167,139,250,0.5)] hover:scale-[1.02] transition-all">🎓 הכנסת מורה</button>
-          <button type="button" onClick={() => setView("createStudent")} className="w-full rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 py-6 text-xl font-bold text-white shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(20,184,166,0.5)] hover:scale-[1.02] transition-all">➕ הכנסת תלמיד</button>
           <button type="button" onClick={() => setView("deleteStudent")} className="w-full rounded-2xl bg-gradient-to-r from-rose-600 to-pink-600 py-6 text-xl font-bold text-white shadow-[0_0_15px_rgba(225,29,72,0.3)] hover:shadow-[0_0_25px_rgba(244,63,94,0.5)] hover:scale-[1.02] transition-all">🗑️ מחיקת תלמיד</button>
         </div>
       </GlassCard>

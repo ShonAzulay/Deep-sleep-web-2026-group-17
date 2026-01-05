@@ -81,10 +81,35 @@ export default function TeacherDashboard({ onLogout }) {
   }
 
   const handleExport = () => {
-    const ws = XLSX.utils.json_to_sheet(sleepData);
+    // Transform data for better Excel headers
+    const exportData = sleepData.map(row => {
+      const newRow = {
+        "תאריך": row.date,
+        "שעות שינה": row.total_sleep_estimate,
+        "פעילות לפני שינה": Array.isArray(row.pre_sleep_activity) ? row.pre_sleep_activity.join(", ") : row.pre_sleep_activity,
+        "איכות שינה": row.quality || "-"
+      };
+
+      // Handle Dynamic Questions with Categories
+      Object.keys(row).forEach(key => {
+        if (key.startsWith("custom_") && !key.endsWith("_category") && !key.endsWith("_text")) {
+          // Found an answer key. Check for metadata.
+          const category = row[`${key}_category`] || "כללי";
+          const questionText = row[`${key}_text`] || "שאלה מותאמת";
+
+          // Create a nice header: "[Nutrition] Did you eat?"
+          const header = `[${category}] ${questionText}`;
+          newRow[header] = row[key];
+        }
+      });
+
+      return newRow;
+    });
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "ClassData");
-    XLSX.writeFile(wb, "Class_Sleep_Report.xlsx"); // ייצוא לאקסל
+    XLSX.writeFile(wb, "Class_Sleep_Report_With_Categories.xlsx");
   };
 
   // ---------------- תצוגת הוספת שאלות כיתתיות ----------------
