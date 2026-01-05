@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { loginWithDb } from "../services/authDb";
 import { registerStudent } from "../services/studentRegistrationService";
+import { registerTeacher } from "../services/teacherService"; // Import registerTeacher
 
 const ROLE_LABEL = {
   student: "תלמיד",
@@ -23,6 +24,7 @@ export default function Login({ role, onLogin, onBack }) {
   const [school, setSchool] = useState("");
   const [grade, setGrade] = useState("z"); // Default grade
   const [classNum, setClassNum] = useState("");
+  const [fullName, setFullName] = useState(""); // For Teacher Name
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,7 +34,13 @@ export default function Login({ role, onLogin, onBack }) {
   // Validate Submit
   let canSubmit = false;
   if (isRegister) {
-    canSubmit = username.trim() && password.trim() && expId.trim() && school.trim() && classNum.trim() && !loading;
+    // Basic validation
+    // If teacher, expId is not required (we use default). 
+    const expValid = role === 'teacher' ? true : expId.trim();
+    // If teacher, require fullName
+    const nameValid = role === 'teacher' ? fullName.trim() : true;
+
+    canSubmit = username.trim() && password.trim() && expValid && school.trim() && classNum.trim() && nameValid && !loading;
   } else {
     canSubmit = username.trim() !== "" && password.trim() !== "" && !loading;
   }
@@ -44,14 +52,40 @@ export default function Login({ role, onLogin, onBack }) {
     try {
       if (isRegister) {
         // --- REGISTER FLOW ---
-        const newUser = await registerStudent({
-          experimentId: expId,
-          username: username, // Full Name / ID
-          password: password,
-          schoolName: school,
-          grade: grade,
-          classNum: classNum
-        });
+        const GRADE_MAPPING = {
+          'z': 'ז',
+          'h': 'ח',
+          't': 'ט',
+          'y': 'י',
+          'ya': 'יא',
+          'yb': 'יב'
+        };
+        const hebrewGrade = GRADE_MAPPING[grade] || grade; // Fallback to original if not found
+
+        let newUser;
+        if (role === 'teacher') {
+          // Default to "Exp1" to match Manager Dashboard default
+          const effectiveExpId = expId.trim() || "Exp1";
+          newUser = await registerTeacher({
+            experimentId: effectiveExpId,
+            teacherName: fullName, // Use fullName for teacher's name
+            email: username, // Use username input as email for teacher
+            password: password,
+            schoolName: school,
+            grade: hebrewGrade, // Send Hebrew Letter
+            classNum: classNum
+          });
+        } else {
+          // Student
+          newUser = await registerStudent({
+            experimentId: expId,
+            username: username,
+            password: password,
+            schoolName: school,
+            grade: hebrewGrade, // Send Hebrew Letter
+            classNum: classNum
+          });
+        }
 
         // Auto-login after register
         sessionStorage.setItem("currentUser", JSON.stringify(newUser));
@@ -97,42 +131,55 @@ export default function Login({ role, onLogin, onBack }) {
           {/* REGISTER EXTRA FIELDS */}
           {isRegister && (
             <div className="space-y-4 animate-fadeIn">
+              {/* Experiment ID - Visible for everyone now, defaulting to Exp1 */}
               <input
                 type="text"
-                placeholder="קוד ניסוי (למשל: exp1)"
+                placeholder="קוד ניסוי (ברירת מחדל: Exp1)"
                 value={expId}
                 onChange={(e) => setExpId(e.target.value)}
                 className="w-full rounded-xl bg-indigo-950/40 border border-indigo-500/30 px-4 py-3 text-white placeholder-indigo-400 focus:ring-2 focus:ring-cyan-400 outline-none"
               />
+
+              {role === 'teacher' && (
+                <input
+                  type="text"
+                  placeholder="שם מלא (להצגה לתלמידים)"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="w-full rounded-xl bg-indigo-950/40 border border-indigo-500/30 px-4 py-3 text-white placeholder-indigo-400 focus:ring-2 focus:ring-cyan-400 outline-none"
+                />
+              )}
+
+              <input
+                type="text"
+                placeholder="שם בית ספר (חייב להיות זהה להגדרת המנהל)"
+                value={school}
+                onChange={(e) => setSchool(e.target.value)}
+                className="w-full rounded-xl bg-indigo-950/40 border border-indigo-500/30 px-4 py-3 text-white placeholder-indigo-400 focus:ring-2 focus:ring-cyan-400 outline-none mb-3"
+              />
+
               <div className="grid grid-cols-2 gap-2">
                 <input
                   type="text"
-                  placeholder="שם בית ספר"
-                  value={school}
-                  onChange={(e) => setSchool(e.target.value)}
-                  className="w-full rounded-xl bg-indigo-950/40 border border-indigo-500/30 px-4 py-3 text-white placeholder-indigo-400 focus:ring-2 focus:ring-cyan-400 outline-none"
-                />
-                <input
-                  type="text"
-                  placeholder="מס' כיתה (למשל: 3)"
+                  placeholder="מס' כיתה (למשל: 5)"
                   value={classNum}
                   onChange={(e) => setClassNum(e.target.value)}
                   className="w-full rounded-xl bg-indigo-950/40 border border-indigo-500/30 px-4 py-3 text-white placeholder-indigo-400 focus:ring-2 focus:ring-cyan-400 outline-none"
                 />
-              </div>
 
-              <select
-                value={grade}
-                onChange={(e) => setGrade(e.target.value)}
-                className="w-full rounded-xl bg-indigo-950/40 border border-indigo-500/30 px-4 py-3 text-white focus:ring-2 focus:ring-cyan-400 outline-none"
-              >
-                <option value="z">שכבה ז'</option>
-                <option value="h">שכבה ח'</option>
-                <option value="t">שכבה ט'</option>
-                <option value="y">שכבה י'</option>
-                <option value="ya">שכבה י"א</option>
-                <option value="yb">שכבה י"ב</option>
-              </select>
+                <select
+                  value={grade}
+                  onChange={(e) => setGrade(e.target.value)}
+                  className="w-full rounded-xl bg-indigo-950/40 border border-indigo-500/30 px-4 py-3 text-white focus:ring-2 focus:ring-cyan-400 outline-none"
+                >
+                  <option value="z">שכבה ז'</option>
+                  <option value="h">שכבה ח'</option>
+                  <option value="t">שכבה ט'</option>
+                  <option value="y">שכבה י'</option>
+                  <option value="ya">שכבה י"א</option>
+                  <option value="yb">שכבה י"ב</option>
+                </select>
+              </div>
             </div>
           )}
 
@@ -175,8 +222,8 @@ export default function Login({ role, onLogin, onBack }) {
             </div>
           )}
 
-          {/* TOGGLE REGISTER MODE (Students Only) */}
-          {role === 'student' && (
+          {/* TOGGLE REGISTER MODE (Students & Teachers) */}
+          {(role === 'student' || role === 'teacher') && (
             <div className="text-center pt-2 border-t border-white/10 mt-4">
               <span className="text-indigo-300 text-sm ml-2">
                 {isRegister ? "כבר יש לך משתמש?" : "אין לך עדיין משתמש?"}
@@ -205,6 +252,6 @@ export default function Login({ role, onLogin, onBack }) {
       <div className="absolute bottom-4 text-indigo-500/30 text-xs font-mono tracking-widest pointer-events-none z-20">
         DEEP-SLEEP LABS // AUTH // {isRegister ? "REGISTRATION" : "LOGIN"}
       </div>
-    </SpaceLayout>
+    </SpaceLayout >
   );
 }

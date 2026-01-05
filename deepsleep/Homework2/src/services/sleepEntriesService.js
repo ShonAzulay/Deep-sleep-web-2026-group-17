@@ -20,6 +20,7 @@ export async function saveSleepEntry(experimentId, classId, studentId, entry) {
   const dateStr = entry.date || new Date().toISOString().split('T')[0];
 
   // יצירת מזהה ייחודי לרשומה למניעת כפילויות באותו יום
+  // יצירת מזהה ייחודי לרשומה למניעת כפילויות באותו יום
   const docId = `${studentId}_${dateStr}`;
 
   const responseDocRef = doc(db, "experiments", experimentId, "classes", classId, "responses", docId);
@@ -30,10 +31,7 @@ export async function saveSleepEntry(experimentId, classId, studentId, entry) {
     experimentId,
     classId,
     date: dateStr, // מוודאים שהתאריך נשמר
-    updatedAt: serverTimestamp(), // במידה ומעדכנים רשומה קיימת
-    // אם זו רשומה חדשה לגמרי, אולי רוצים createdAt, אבל setDoc דורס או ממזג.
-    // כאן אנחנו משתמשים ב-merge: false (ברירת מחדל של setDoc ללא אופציות זה דריסה, אבל אנחנו רוצים את זה מלא)
-    // אם רוצים לשמר שדות קודמים צריך { merge: true }, אבל הבקשה הייתה "no duplicate entries", אז דריסה זה בסדר ליום ספציפי.
+    updatedAt: serverTimestamp()
   });
 
   return docId;

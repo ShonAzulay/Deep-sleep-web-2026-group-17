@@ -34,6 +34,8 @@ export default function StudentEntry({ onLogin }) {
 
         try {
             const user = await getOrCreateAnonymousStudent(params.expId, params.classId, code);
+            // Save to session so SleepForm can read it
+            sessionStorage.setItem("currentUser", JSON.stringify(user));
             // Success! Login the user
             onLogin(user);
         } catch (err) {

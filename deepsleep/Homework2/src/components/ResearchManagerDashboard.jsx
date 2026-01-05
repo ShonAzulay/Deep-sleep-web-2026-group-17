@@ -83,6 +83,8 @@ export default function ResearchManagerDashboard({ onLogout }) {
 
   async function fetchClasses() {
     setLoading(true);
+    setError("");
+    setMessage("");
     try {
       const colRef = collection(db, "experiments", experimentId, "classes");
       const snap = await getDocs(colRef);
@@ -98,6 +100,8 @@ export default function ResearchManagerDashboard({ onLogout }) {
 
   async function loadQuestions() {
     setLoadingQ(true);
+    setError("");
+    setMessage("");
     setPendingQuestions([]);
     setEditedTexts({});
     setQuestionCategories({});
