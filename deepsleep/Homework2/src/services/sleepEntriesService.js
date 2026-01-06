@@ -38,3 +38,20 @@ export async function saveSleepEntry(experimentId, classId, studentId, entry) {
 
   return docId;
 }
+
+/**
+ * החזרת מספר הרשומות שהמשתמש מילא (עבור פרוגרס בר ושחרור שלבים)
+ */
+import { collection, query, where, getCountFromServer } from "firebase/firestore";
+
+export async function getUserSubmissionCount(experimentId, classId, studentId) {
+  try {
+    const collRef = collection(db, "experiments", experimentId, "classes", classId, "responses");
+    const q = query(collRef, where("studentId", "==", studentId));
+    const snapshot = await getCountFromServer(q);
+    return snapshot.data().count;
+  } catch (err) {
+    console.error("Error counting submissions:", err);
+    return 0;
+  }
+}
