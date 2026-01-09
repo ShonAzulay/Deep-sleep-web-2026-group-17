@@ -88,24 +88,42 @@ export default function TeacherDashboard({ onLogout }) {
   }
 
   const generateExcel = (data) => {
+    // 1. Create Anonymized Map (Student Real ID -> Sequential Number 1, 2, 3...)
+    const uniqueStudentIds = [...new Set(data.map(r => r.studentId || r.id))].filter(Boolean).sort();
+    const studentIdMap = {};
+    uniqueStudentIds.forEach((id, index) => {
+      studentIdMap[id] = index + 1; // 1-based index
+    });
+
     // Transform data for better Excel headers
     const exportData = data.map(row => {
+      const realId = row.studentId || row.id;
+      const anonymousId = studentIdMap[realId] || "Anonymous";
+
       const newRow = {
-        "User Code": row.studentId || row.id || "Anonymous", // Add ID first
+        "User Code": anonymousId,
         "תאריך": row.date,
-        "שעות שינה": row.total_sleep_estimate,
+
+        // Static Fields from SleepForm
+        "שכבה": row.grade,
+        "מגדר": row.gender === 'male' ? 'בן' : (row.gender === 'female' ? 'בת' : row.gender),
+        "זמן כניסה למיטה": row.bed_entry_time,
+        "זמן החלטה לעצום עיניים": row.eye_close_decision,
         "פעילות לפני שינה": Array.isArray(row.pre_sleep_activity) ? row.pre_sleep_activity.join(", ") : row.pre_sleep_activity,
-        "איכות שינה": row.quality || "-"
+        "זמן עד הירדמות": row.time_to_fall_asleep,
+        "מספר יקיצות": row.wakeups_count,
+        "משך ערות בלילה": row.awake_duration_total,
+        "זמן יקיצה": row.wake_up_time,
+        "אופן יקיצה": row.wake_up_method,
+        "שעות שינה מוערכות": row.total_sleep_estimate,
+        "הערות": row.notes || ""
       };
 
-      // Handle Dynamic Questions with Categories
+      // Handle Dynamic Questions
       Object.keys(row).forEach(key => {
         if (key.startsWith("custom_") && !key.endsWith("_category") && !key.endsWith("_text")) {
-          // Found an answer key. Check for metadata.
           const category = row[`${key}_category`] || "כללי";
           const questionText = row[`${key}_text`] || "שאלה מותאמת";
-
-          // Create a nice header: "[Nutrition] Did you eat?"
           const header = `[${category}] ${questionText}`;
           newRow[header] = row[key];
         }

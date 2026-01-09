@@ -1,9 +1,12 @@
 import { db } from "./firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { collectionGroup, getDocs, query } from "firebase/firestore";
 
-// שליפת כל הטפסים
+// שליפת כל הטפסים מכל הניסויים והכיתות
 export async function fetchAllSleepEntries() {
-  const snap = await getDocs(collection(db, "sleepEntries"));
+  // שימוש ב-collectionGroup כדי לשלוף את כל המסמכים בקולקציית "responses"
+  // לא משנה איפה הם נמצאים בהיררכיה
+  const q = query(collectionGroup(db, "responses"));
+  const snap = await getDocs(q);
   return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 

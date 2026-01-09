@@ -99,6 +99,13 @@ export async function registerTeacher({
 
   const derivedClassId = `${safeSchool}_${safeGrade}_${safeClassNum}`;
 
+  // 1. Ensure ROOT Experiment Document Exists (for Manager List)
+  const expDocRef = doc(db, "experiments", trimmedExpId);
+  await setDoc(expDocRef, {
+    id: trimmedExpId,
+    lastUpdated: serverTimestamp()
+  }, { merge: true });
+
   // Ensure Class Document Exists (So it appears in Manager List)
   const classDocRef = doc(db, "experiments", trimmedExpId, "classes", derivedClassId);
   // We use setDoc with merge:true so we don't overwrite if exists, but ensure it exists

@@ -40,7 +40,7 @@ export async function saveSleepEntry(experimentId, classId, studentId, entry) {
 /**
  * החזרת מספר הרשומות שהמשתמש מילא (עבור פרוגרס בר ושחרור שלבים)
  */
-import { collection, query, where, getCountFromServer } from "firebase/firestore";
+import { collection, query, where, getCountFromServer, getDocs, collectionGroup } from "firebase/firestore";
 
 export async function getUserSubmissionCount(experimentId, classId, studentId) {
   try {
@@ -51,5 +51,22 @@ export async function getUserSubmissionCount(experimentId, classId, studentId) {
   } catch (err) {
     console.error("Error counting submissions:", err);
     return 0;
+  }
+}
+
+/**
+ * שליפת כל רשומות השינה מכל הכיתות לטובת דוחות
+ */
+export async function fetchAllSleepEntries() {
+  try {
+    const q = query(collectionGroup(db, "responses"));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({
+      id: d.id,
+      ...d.data()
+    }));
+  } catch (err) {
+    console.error("Error fetching all sleep entries:", err);
+    return [];
   }
 }

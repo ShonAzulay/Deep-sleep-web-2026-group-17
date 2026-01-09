@@ -106,3 +106,12 @@ export async function fetchActiveQuestions(experimentId, classId) {
   const snap = await getDocs(getActiveQuestionsCol(experimentId, classId));
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
+
+/**
+ * שליפת כל השאלות הפעילות מכל הכיתות לטובת דוחות
+ */
+export async function fetchAllGlobalActiveQuestions() {
+  const q = query(collectionGroup(db, "activeQuestions"));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
