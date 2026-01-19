@@ -89,7 +89,30 @@ const TRANSLATIONS = {
   "Others": "אחר",
   "others": "אחר",
 
-  // General labels if needed, or fallback
+  // Ranges & Numeric Translations
+  "Under 5": "פחות מ-5",
+  "5 6": "5-6",
+  "6 7": "6-7",
+  "7 8": "7-8",
+  "8 9": "8-9",
+  "9 8": "8-9", // Fix potential reverse mapping
+  "Over 9": "מעל 9",
+  "15 30": "15-30",
+  "30 60": "30-60",
+  "5 15": "5-15",
+  "Over 60": "מעל 60",
+  "Or Less 15": "15 דקות או פחות",
+  "or_less_15": "15 דקות או פחות",
+  "15 or less": "15 דקות או פחות",
+
+  // Activities & Other corrections
+  "Book": "ספר",
+  "book": "ספר",
+  "Noise Light": "רעש / אור",
+  "noise_light": "רעש / אור",
+
+  // Missing Range
+  "15 30": "15-30",
 };
 
 function t(label) {
@@ -109,7 +132,26 @@ function PieChartCard({ title, data, colors = PIE_COLORS }) {
   if (!data || Object.keys(data).length === 0) return null;
 
   const total = Object.values(data).reduce((a, b) => a + b, 0);
-  const sortedEntries = Object.entries(data).sort((a, b) => b[1] - a[1]);
+
+  // Logical order for sleep ranges
+  const LOGICAL_ORDER = [
+    "Under 5", "under_5",
+    "15 or less", "15_or_less", "Or Less 15",
+    "5 6", "5_6", "6 7", "6_7",
+    "7 8", "7_8", "8 9", "8_9", "9 8", "Over 9", "over_9",
+    "5 15", "5_15", "15 30", "15_30", "30 60", "30_60", "Over 60", "over_60"
+  ];
+
+  const sortedEntries = Object.entries(data).sort((a, b) => {
+    const indexA = LOGICAL_ORDER.indexOf(a[0]);
+    const indexB = LOGICAL_ORDER.indexOf(b[0]);
+
+    // If both are in logical order, sort by that index
+    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+
+    // Otherwise fallback to count descending
+    return b[1] - a[1];
+  });
 
   let currentAngle = 0;
   const gradientParts = sortedEntries.map(([label, count], index) => {

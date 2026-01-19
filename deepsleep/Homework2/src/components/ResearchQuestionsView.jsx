@@ -49,10 +49,22 @@ export default function ResearchQuestionsView({ onBack }) {
         try {
             const data = await fetchPendingQuestions();
             setPendingQuestions(data);
-            // Initialize edited texts with original texts
+            // Initialize edited texts with original texts and types
             const initialEdits = {};
-            data.forEach(q => initialEdits[q.id] = q.text);
+            const initialTypes = {};
+            const initialOptions = {};
+
+            data.forEach(q => {
+                initialEdits[q.id] = q.text;
+                initialTypes[q.id] = q.type || 'text';
+                if (q.options && Array.isArray(q.options)) {
+                    initialOptions[q.id] = q.options.join(', ');
+                }
+            });
+
             setEditedTexts(initialEdits);
+            setQuestionTypes(initialTypes);
+            setQuestionOptions(initialOptions);
         } catch (err) {
             console.error(err);
             setError("שגיאה בטעינת שאלות");

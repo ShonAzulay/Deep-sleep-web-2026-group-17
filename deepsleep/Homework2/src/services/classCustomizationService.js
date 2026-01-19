@@ -18,11 +18,14 @@ const getActiveQuestionsCol = (expId, classId) => collection(db, "experiments", 
 /**
  * מגיש בקשה להוספת שאלה (למשל ע"י מורה)
  */
-export async function submitQuestionRequest(experimentId, classId, questionText) {
-  if (!questionText.trim()) throw new Error("Question text cannot be empty");
+export async function submitQuestionRequest(experimentId, classId, questionData) {
+  const { text, type = "text", options = [] } = questionData;
+  if (!text || !text.trim()) throw new Error("Question text cannot be empty");
 
   await addDoc(getRequestsCol(experimentId, classId), {
-    text: questionText,
+    text: text,
+    type: type, // 'text' | 'select' | 'multi'
+    options: options,
     status: "pending",
     createdAt: serverTimestamp(),
   });

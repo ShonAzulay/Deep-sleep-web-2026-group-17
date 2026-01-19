@@ -194,8 +194,9 @@ export default function SleepForm({ onLogout }) {
       saveSleepEntry(context.experimentId, context.classId, context.id, answers)
         .then(() => {
           setSaveStatus('success');
-          // Update local count immediately to show progress
-          setSubmissionCount(prev => prev + 1);
+          // Re-fetch the true count from DB to handle upserts (prevent double counting)
+          getUserSubmissionCount(context.experimentId, context.classId, context.id)
+            .then(count => setSubmissionCount(count));
         })
         .catch((err) => {
           console.error("Failed to save sleep entry", err);

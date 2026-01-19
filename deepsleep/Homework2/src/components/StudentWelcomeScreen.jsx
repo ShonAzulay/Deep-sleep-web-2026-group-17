@@ -9,6 +9,23 @@ export default function StudentWelcomeScreen({ onStart, onLogout, submissionCoun
                 <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-400 mb-2 drop-shadow-[0_0_15px_rgba(0,243,255,0.5)] animate-pulse">
                     DAILY MISSION
                 </h1>
+                {/* Visual Streak Tracker */}
+                <div className="flex justify-center gap-1 mb-4">
+                    {Array.from({ length: 14 }).map((_, i) => (
+                        <div
+                            key={i}
+                            className={`
+                                w-3 h-5 sm:w-4 sm:h-6 rounded-sm border transition-all duration-300
+                                ${i < submissionCount
+                                    ? 'bg-cyan-400 border-cyan-300 shadow-[0_0_10px_#22d3ee] scale-105'
+                                    : 'bg-indigo-950/30 border-indigo-500/30'
+                                }
+                            `}
+                            title={`Day ${i + 1}`}
+                        />
+                    ))}
+                </div>
+
                 <p className="text-indigo-200 mb-8 tracking-wider font-mono text-xs uppercase opacity-80">
                     DAY {submissionCount + 1} // REPORT REQUIRED
                 </p>
