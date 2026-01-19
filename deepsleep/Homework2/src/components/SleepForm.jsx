@@ -178,20 +178,33 @@ export default function SleepForm({ onLogout }) {
     } catch (e) { console.error("Error parsing user context", e); }
   }, []);
 
+  const [saveStatus, setSaveStatus] = useState('idle'); // idle, saving, success, error
+  const [saveError, setSaveError] = useState('');
+
   useEffect(() => {
-    if (step === steps.length) {
+    if (step === steps.length && saveStatus === 'idle') {
       if (!context?.experimentId || !context?.classId || !context?.id) {
         console.error("Missing user context");
+        setSaveStatus('error');
+        setSaveError('Missing User Context');
         return;
       }
+
+      setSaveStatus('saving');
       saveSleepEntry(context.experimentId, context.classId, context.id, answers)
         .then(() => {
-          // Update local count immediately to show progress
-          setSubmissionCount(prev => prev + 1);
+          setSaveStatus('success');
+          // Re-fetch the true count from DB to handle upserts (prevent double counting)
+          getUserSubmissionCount(context.experimentId, context.classId, context.id)
+            .then(count => setSubmissionCount(count));
         })
-        .catch((err) => console.error("Failed to save sleep entry", err));
+        .catch((err) => {
+          console.error("Failed to save sleep entry", err);
+          setSaveStatus('error');
+          setSaveError(err.message || "Unknown DB Error");
+        });
     }
-  }, [step, answers, steps.length, context]);
+  }, [step, answers, steps.length, context, saveStatus]);
 
   // If Game is active, show overlay
   if (showGame) {
@@ -215,7 +228,17 @@ export default function SleepForm({ onLogout }) {
           </div>
 
           <h2 className="text-3xl font-bold mb-2">כל הכבוד!</h2>
-          <p className="text-indigo-300 mb-8">היומן היומי נשמר בהצלחה.</p>
+
+          {saveStatus === 'saving' && <p className="text-yellow-400 animate-pulse">⏳ שומר נתונים...</p>}
+          {saveStatus === 'success' && <p className="text-green-400">היומן היומי נשמר בהצלחה! כל הכבוד!</p>}
+          {saveStatus === 'error' && (
+            <div className="bg-red-500/20 border border-red-500 p-4 rounded-xl mb-4">
+              <p className="text-red-300 font-bold">❌ שגיאה בשמירה:</p>
+              <p className="text-red-200 text-sm font-mono">{saveError}</p>
+            </div>
+          )}
+
+          <p className="text-indigo-300 mb-8">היומן היומי הושלם.</p>
 
           <div className="space-y-4">
             <div className="p-4 rounded-xl bg-indigo-900/40 border border-indigo-500/30 mb-6">
@@ -435,9 +458,8 @@ export default function SleepForm({ onLogout }) {
 
       </GlassCard>
 
-      {/* Footer Branding */}
-      <div className="absolute bottom-4 text-indigo-500/30 text-xs font-mono tracking-widest pointer-events-none z-20">
-        DEEP-SLEEP LABS // V2.0
+      <div className="absolute bottom-4 text-indigo-500/30 text-xs font-mono tracking-widest pointer-events-none z-20 flex flex-col items-center">
+        <span>DEEP-SLEEP LABS // V2.0</span>
       </div>
 
     </SpaceLayout>

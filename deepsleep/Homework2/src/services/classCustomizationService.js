@@ -18,11 +18,14 @@ const getActiveQuestionsCol = (expId, classId) => collection(db, "experiments", 
 /**
  * מגיש בקשה להוספת שאלה (למשל ע"י מורה)
  */
-export async function submitQuestionRequest(experimentId, classId, questionText) {
-  if (!questionText.trim()) throw new Error("Question text cannot be empty");
+export async function submitQuestionRequest(experimentId, classId, questionData) {
+  const { text, type = "text", options = [] } = questionData;
+  if (!text || !text.trim()) throw new Error("Question text cannot be empty");
 
   await addDoc(getRequestsCol(experimentId, classId), {
-    text: questionText,
+    text: text,
+    type: type, // 'text' | 'select' | 'multi'
+    options: options,
     status: "pending",
     createdAt: serverTimestamp(),
   });
@@ -104,5 +107,14 @@ export async function approveQuestions(approvedQuestionsList) {
  */
 export async function fetchActiveQuestions(experimentId, classId) {
   const snap = await getDocs(getActiveQuestionsCol(experimentId, classId));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+/**
+ * שליפת כל השאלות הפעילות מכל הכיתות לטובת דוחות
+ */
+export async function fetchAllGlobalActiveQuestions() {
+  const q = query(collectionGroup(db, "activeQuestions"));
+  const snap = await getDocs(q);
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
