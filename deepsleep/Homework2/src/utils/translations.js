@@ -55,8 +55,12 @@ const TRANSLATIONS = {
 };
 
 /**
- * Translates a label or key to Hebrew using the definitions map.
- * Case-insensitive lookup fallback included.
+ * Translations Utility
+ * --------------------
+ * Central dictionary for converting English data keys to Hebrew display labels.
+ * 
+ * @param {string} label - The label to translate.
+ * @returns {string} The Hebrew translation or the original key if missing.
  */
 export function t(label) {
     if (!label) return "";

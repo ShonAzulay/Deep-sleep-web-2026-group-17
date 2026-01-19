@@ -12,6 +12,15 @@ const DEFAULT_PIE_COLORS = [
     "#a3e635", // Lime
 ];
 
+/**
+ * PieChartCard Component
+ * ----------------------
+ * Reusable Pie Chart component built with conic-gradients (CSS).
+ * Responsibilities:
+ * 1. Displaying categorical data distribution.
+ * 2. Handling custom sort order for logic ranges (e.g. Under 5 -> 5-15).
+ * 3. Rendering a responsive legend with translated labels.
+ */
 export default function PieChartCard({ title, data, colors = DEFAULT_PIE_COLORS }) {
     if (!data || Object.keys(data).length === 0) return null;
 

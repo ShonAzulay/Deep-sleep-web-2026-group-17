@@ -6,6 +6,16 @@ import TeacherQuestionsForm from "./TeacherQuestionsForm";
 import SpaceLayout from './ui/SpaceLayout';
 import GlassCard from './ui/GlassCard';
 
+/**
+ * TeacherDashboard Component
+ * --------------------------
+ * The main interface for teachers.
+ * Responsibilities:
+ * 1. View live submission counts for the class.
+ * 2. Export class data to Excel via `handleExportReport`.
+ * 3. Suggest new questions for the research manager to approve (handled by `TeacherQuestionsForm`).
+ * 4. Generate invite links for students.
+ */
 export default function TeacherDashboard({ onLogout }) {
   const [view, setView] = useState("menu"); // "menu" | "addQuestions"
   const [loading, setLoading] = useState(false);

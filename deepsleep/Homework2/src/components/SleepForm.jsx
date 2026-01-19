@@ -9,6 +9,16 @@ import GlassCard from './ui/GlassCard';
 
 import { STATIC_STEPS } from "../data/staticQuestions";
 
+/**
+ * SleepForm Component
+ * -------------------
+ * The primary data collection wizard for students.
+ * Responsibilities:
+ * 1. Displaying a multi-step form wizard (Static steps + Dynamic questions).
+ * 2. Merging static questions with research-manager defined dynamic questions.
+ * 3. Saving daily sleep entries to Firestore via `sleepEntriesService`.
+ * 4. Handling validation and UI state for the form progression.
+ */
 export default function SleepForm({ onLogout }) {
   // "welcome" | "form" | "success" (handled by step logic mostly)
 

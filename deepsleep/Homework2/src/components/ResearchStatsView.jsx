@@ -46,6 +46,15 @@ const QUALITY_COLORS = [
   "#fb923c", // Orange
 ];
 
+/**
+ * ResearchStatsView Component
+ * ----------------------------
+ * Displays statistical data visualizations for the researcher.
+ * Responsibilities:
+ * 1. Fetching aggregated data via `sleepStatsService`.
+ * 2. Computing statistics locally.
+ * 3. Rendering Pie Charts and Bar Charts using `PieChartCard` and `StatCard`.
+ */
 export default function ResearchStatsView({ onBack }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);

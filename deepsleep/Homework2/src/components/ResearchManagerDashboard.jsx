@@ -9,6 +9,17 @@ import ResearchClassesView from "./ResearchClassesView";
 import ResearchQuestionsView from "./ResearchQuestionsView";
 import ResearchTeacherView from "./ResearchTeacherView";
 
+/**
+ * ResearchManagerDashboard Component
+ * ----------------------------------
+ * The central hub for Research Managers.
+ * Responsibilities:
+ * 1. Navigation menu for all research sub-views (Stats, Reports, Classes, etc.).
+ * 2. Managing state to switch between these sub-views.
+ * 3. Displaying active experiment metadata (Experiment ID: deepsleep-research).
+ * 
+ * This component acts as a layout shell, rendering specific "View" components based on the selected menu item.
+ */
 export default function ResearchManagerDashboard({ onLogout }) {
   const [view, setView] = useState("menu");
   const [experimentId, setExperimentId] = useState("Exp1");
