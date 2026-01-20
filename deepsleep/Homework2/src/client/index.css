@@ -1,0 +1,161 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@200..800&family=Heebo:wght@100..900&display=swap');
+
+@theme {
+  --color-neon-blue: #00f3ff;
+  --color-space-black: #050510;
+  --font-sans: 'Heebo', 'Assistant', sans-serif;
+}
+
+:root {
+  /* Default to Dark Mode variables (Deep Sleep defaults) */
+  --bg-gradient-start: #1a1a40;
+  --bg-gradient-end: #050510;
+  --text-main: #ffffff;
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='light'] {
+  --bg-gradient-start: #f1f5f9;
+  /* Slate 100 - Very Light Background */
+  --bg-gradient-end: #e2e8f0;
+  /* Slate 200 */
+
+  /* DARK CARD VARIABLES FOR LIGHT MODE */
+  --text-main: #ffffff;
+  /* White text on dark cards */
+  --text-secondary: #c7d2fe;
+  /* Indigo 200 */
+
+  --glass-bg: rgba(30, 27, 75, 0.90);
+  /* Deep Indigo (almost opaque) */
+  --glass-bg-accent: rgba(255, 255, 255, 0.1);
+  /* White/Light accent */
+  --glass-border: rgba(99, 102, 241, 0.3);
+  /* Indigo border */
+
+  --neon-glow: rgba(79, 70, 229, 0.4);
+  /* Stronger glow to separate from white bg */
+
+  --input-bg: rgba(0, 0, 0, 0.3);
+  /* Dark input background */
+  --input-border: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme='dark'] {
+  --bg-gradient-start: #1a1a40;
+  --bg-gradient-end: #050510;
+  --text-main: #ffffff;
+  --text-secondary: #a5b4fc;
+  /* Indigo 200 */
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-bg-accent: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --neon-glow: rgba(0, 243, 255, 0.2);
+
+  --input-bg: rgba(30, 27, 75, 0.4);
+  /* Indigo 950/40 */
+  --input-border: rgba(99, 102, 241, 0.3);
+}
+
+[data-theme='light'] .stars-bg {
+  opacity: 0.4;
+  filter: invert(1) hue-rotate(200deg) sepia(0.5) saturate(2);
+  /* Turns white stars into dark indigo/blue stars instead of plain black */
+}
+
+/* Global Reset & Background */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-gradient-end);
+  color: var(--text-main);
+  overflow-x: hidden;
+  font-family: var(--font-sans);
+  transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+body {
+  background: radial-gradient(circle at center, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+}
+
+/* Stars Background Layer */
+.stars-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background-image:
+    radial-gradient(2px 2px at 20px 30px, #eee, rgba(0, 0, 0, 0)),
+    radial-gradient(2px 2px at 40px 70px, #fff, rgba(0, 0, 0, 0)),
+    radial-gradient(2px 2px at 50px 160px, #ddd, rgba(0, 0, 0, 0)),
+    radial-gradient(2px 2px at 90px 40px, #fff, rgba(0, 0, 0, 0)),
+    radial-gradient(1.5px 1.5px at 130px 80px, #fff, rgba(0, 0, 0, 0));
+  background-repeat: repeat;
+  background-size: 200px 200px;
+  animation: starsMove 100s linear infinite;
+  z-index: 0;
+}
+
+@keyframes starsMove {
+  from {
+    background-position: 0 0;
+  }
+
+  to {
+    background-position: 1000px 1000px;
+  }
+}
+
+/* Animations */
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes shooting {
+  0% {
+    transform: translateX(0) translateY(0) rotate(45deg);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateX(500px) translateY(500px) rotate(45deg);
+    opacity: 0;
+  }
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  /* Added generic shadow base */
+  border-radius: 1.5rem;
+}
+
+.neon-border {
+  box-shadow: 0 0 5px var(--color-neon-blue), inset 0 0 5px var(--color-neon-blue);
+  border-color: var(--color-neon-blue);
+}
