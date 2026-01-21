@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { db } from "../../server/firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { fetchResearchClasses, createResearchClass } from "../../server/services/researchManagerService";
 import SpaceLayout from './ui/SpaceLayout';
 import GlassCard from './ui/GlassCard';
 import ResearchDashboardHeader from "./ResearchDashboardHeader";
@@ -26,9 +25,7 @@ export default function ResearchClassesView({ experimentId, setExperimentId, onB
         setError("");
         setMessage("");
         try {
-            const colRef = collection(db, "experiments", experimentId, "classes");
-            const snap = await getDocs(colRef);
-            const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            const list = await fetchResearchClasses(experimentId);
             setClassesList(list);
         } catch (err) {
             console.error(err);
@@ -42,27 +39,16 @@ export default function ResearchClassesView({ experimentId, setExperimentId, onB
         if (!canSubmitCreateClass) return;
         setLoading(true);
         try {
-            const { doc, setDoc, serverTimestamp } = await import("firebase/firestore");
-
             const sanitize = (str) => str.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-\u0590-\u05FF]/g, '');
             const safeSchool = sanitize(newSchoolName);
             const safeGrade = sanitize(newGrade);
             const safeClassNum = sanitize(newClassNum);
             const newClassId = `${safeSchool}_${safeGrade}_${safeClassNum}`;
 
-            // 1. Ensure ROOT Experiment Document Exists (for List Feature)
-            await setDoc(doc(db, "experiments", experimentId), {
-                lastUpdated: serverTimestamp(),
-                id: experimentId
-            }, { merge: true });
-
-            // 2. Create Class Document
-            await setDoc(doc(db, "experiments", experimentId, "classes", newClassId), {
+            await createResearchClass(experimentId, newClassId, {
                 schoolName: newSchoolName,
                 grade: newGrade,
-                classNum: newClassNum,
-                createdAt: serverTimestamp(),
-                experimentId: experimentId
+                classNum: newClassNum
             });
 
             setMessage(`כיתה ${newClassId} נוצרה בהצלחה!`);

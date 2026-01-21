@@ -53,9 +53,9 @@ function App() {
   // but we might need to handle specific cleanups if needed. Both work.
   // The original onLogout also cleared role, context logout does too.
 
-  if (user.role === "student") return <StudentDashboard onLogout={logout} />;
-  if (user.role === "teacher") return <TeacherDashboard onLogout={logout} />;
-  return <ResearchManagerDashboard onLogout={logout} />;
+  if (user.role === "student") return <StudentDashboard />;
+  if (user.role === "teacher") return <TeacherDashboard />;
+  return <ResearchManagerDashboard />;
 }
 
 export default App;

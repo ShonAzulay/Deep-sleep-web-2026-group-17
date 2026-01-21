@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { db } from "../../server/firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { fetchAllExperiments } from "../../server/services/researchManagerService";
 
 export default function ResearchDashboardHeader({ title, experimentId, setExperimentId, error, message }) {
     const [experimentsList, setExperimentsList] = useState([]);
@@ -8,9 +7,7 @@ export default function ResearchDashboardHeader({ title, experimentId, setExperi
 
     async function fetchExperiments() {
         try {
-            const colRef = collection(db, "experiments");
-            const snap = await getDocs(colRef);
-            const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            const list = await fetchAllExperiments();
             setExperimentsList(list);
         } catch (err) {
             console.error("Error fetching experiments:", err);

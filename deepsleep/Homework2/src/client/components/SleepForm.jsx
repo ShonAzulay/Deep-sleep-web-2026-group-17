@@ -152,15 +152,7 @@ export default function SleepForm() {
               🚀 שחק במשחק החלל (שלב {submissionCount})
             </button>
 
-            <button
-              onClick={() => {
-                setStep(0);
-                setAnswers({}); // Reset all
-              }}
-              className="w-full py-3 rounded-xl border border-[var(--glass-border)] hover:bg-[var(--glass-bg-accent)] text-[var(--text-secondary)] transition-colors"
-            >
-              למלא שוב (לצורך בדיקה)
-            </button>
+
 
             <button onClick={logout} className="w-full py-3 text-sm text-[var(--text-secondary)] hover:text-[var(--text-main)] transition-colors">
               התנתק וחזור להתחלה
@@ -178,6 +170,9 @@ export default function SleepForm() {
         onStart={() => setView("form")}
         onLogout={logout}
         submissionCount={submissionCount}
+        experimentId={user?.experimentId}
+        classId={user?.classId}
+        studentId={user?.id}
       />
     );
   }

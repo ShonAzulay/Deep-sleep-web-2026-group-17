@@ -1,8 +1,55 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import SpaceLayout from './ui/SpaceLayout';
 import GlassCard from './ui/GlassCard';
+import { getLastSubmissionTime } from "../../server/services/sleepEntriesService";
 
-export default function StudentWelcomeScreen({ onStart, onLogout, submissionCount }) {
+export default function StudentWelcomeScreen({ onStart, onLogout, submissionCount, experimentId, classId, studentId }) {
+    const [allowedToSubmit, setAllowedToSubmit] = useState(false);
+    const [nextAvailableTime, setNextAvailableTime] = useState(null);
+    const [checking, setChecking] = useState(true);
+
+    useEffect(() => {
+        checkEligibility();
+    }, [experimentId, classId, studentId]);
+
+    async function checkEligibility() {
+        if (!experimentId || !classId || !studentId) {
+            setChecking(false); // Stop checking, but keep allowed=false if missing data (or handle error)
+            return;
+        }
+
+        setChecking(true);
+        const lastTime = await getLastSubmissionTime(experimentId, classId, studentId);
+
+        if (!lastTime) {
+            setAllowedToSubmit(true);
+        } else {
+            // Logic: Can submit if NOW > (LastTime + 1 Day at 07:00 AM)
+
+            // 1. Calculate 'Next Available Day' (Last Submission + 1 Day)
+            const nextDay = new Date(lastTime);
+            nextDay.setDate(nextDay.getDate() + 1);
+
+            // 2. Set strict time to 07:00:00
+            nextDay.setHours(7, 0, 0, 0);
+
+            const now = new Date();
+
+            if (now >= nextDay) {
+                setAllowedToSubmit(true);
+            } else {
+                setAllowedToSubmit(false);
+                setNextAvailableTime(nextDay);
+            }
+        }
+        setChecking(false);
+    }
+
+    // Format timer
+    const formatTime = (date) => {
+        if (!date) return "";
+        return date.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', weekday: 'long' });
+    };
     return (
         <SpaceLayout>
             <div className="w-full max-w-lg mt-8 text-center">
@@ -32,15 +79,34 @@ export default function StudentWelcomeScreen({ onStart, onLogout, submissionCoun
 
                 <GlassCard className="mb-6 relative group overflow-hidden" glowColor="cyan">
                     <h2 className="text-2xl font-bold text-white mb-4">יומן שינה יומי</h2>
-                    <p className="text-indigo-200 mb-6 text-sm">
-                        כדי להתקדם במסע ולצבור נקודות, עליך למלא את הדיווח היומי שלך. זה לוקח דקה אחת.
-                    </p>
-                    <button
-                        onClick={onStart}
-                        className="w-full py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold text-lg shadow-[0_0_20px_rgba(0,243,255,0.4)] hover:scale-[1.03] transition-transform"
-                    >
-                        התחל שאלון 📝
-                    </button>
+
+                    {checking ? (
+                        <p className="text-indigo-300 py-6">בודק זמינות שאלון...</p>
+                    ) : allowedToSubmit ? (
+                        <>
+                            <p className="text-indigo-200 mb-6 text-sm">
+                                כדי להתקדם במסע ולצבור נקודות, עליך למלא את הדיווח היומי שלך. זה לוקח דקה אחת.
+                            </p>
+                            <button
+                                onClick={onStart}
+                                className="w-full py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold text-lg shadow-[0_0_20px_rgba(0,243,255,0.4)] hover:scale-[1.03] transition-transform"
+                            >
+                                התחל שאלון 📝
+                            </button>
+                        </>
+                    ) : (
+                        <div className="bg-indigo-950/40 p-4 rounded-xl border border-indigo-500/30">
+                            <h3 className="text-lg font-bold text-indigo-200 mb-2">🛑 השאלון נעול כרגע</h3>
+                            <p className="text-sm text-indigo-300 mb-4">
+                                ניתן למלא שאלון פעם אחת ביום.
+                                <br />
+                                השאלון הבא ייפתח:
+                            </p>
+                            <div className="text-xl font-mono font-bold text-cyan-400 bg-indigo-900/50 py-2 rounded-lg ltr">
+                                {nextAvailableTime?.toLocaleTimeString('he-IL', { weekday: 'long', hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                        </div>
+                    )}
                 </GlassCard>
 
                 {/* Locked Game Card */}

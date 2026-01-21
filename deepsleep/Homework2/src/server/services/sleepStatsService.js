@@ -1,3 +1,10 @@
+/**
+ * Logical Backend Service
+ * -----------------------
+ * This file is part of the server-side logic layer.
+ * It abstracts the database operations (Firebase) from the client-side View layer.
+ * All direct DB access should happen here.
+ */
 import { db } from "../firebase";
 import { collectionGroup, getDocs, query } from "firebase/firestore";
 
@@ -7,6 +14,15 @@ export async function fetchAllSleepEntries() {
   // לא משנה איפה הם נמצאים בהיררכיה
   const q = query(collectionGroup(db, "responses"));
   const snap = await getDocs(q);
+  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+// שליפת טפסים עבור כיתה ספציפית (למורה)
+import { collection } from "firebase/firestore";
+export async function fetchClassSleepEntries(experimentId, classId) {
+  if (!experimentId || !classId) return [];
+  const colRef = collection(db, "experiments", experimentId, "classes", classId, "responses");
+  const snap = await getDocs(colRef);
   return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 

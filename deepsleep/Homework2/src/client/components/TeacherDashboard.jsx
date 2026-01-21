@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { teacherGetClassData, teacherGetSubmissionCount } from "../../server/services/teacherService";
 import { generateClassReportExcel } from "../utils/excelGenerator";
 import TeacherQuestionsForm from "./TeacherQuestionsForm";
+import TeacherStatsView from "./TeacherStatsView";
 
 import SpaceLayout from './ui/SpaceLayout';
 import GlassCard from './ui/GlassCard';
@@ -30,7 +31,7 @@ import { useAppContext } from "../context/AppContext";
  */
 export default function TeacherDashboard() {
   const { user, logout } = useAppContext();
-  const [view, setView] = useState("menu"); // "menu" | "addQuestions"
+  const [view, setView] = useState("menu"); // "menu" | "addQuestions" | "stats"
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -81,6 +82,17 @@ export default function TeacherDashboard() {
       <TeacherQuestionsForm
         onBack={() => setView("menu")}
         context={user}
+      />
+    );
+  }
+
+  // ---------------- תצוגת סטטיסטיקה כיתתית ----------------
+  if (view === "stats") {
+    return (
+      <TeacherStatsView
+        experimentId={user?.experimentId}
+        classId={user?.classId}
+        onBack={() => setView("menu")}
       />
     );
   }
@@ -138,6 +150,13 @@ export default function TeacherDashboard() {
                 <span>📥 הורד דוח כיתתי מלא (Excel)</span>
               </>
             )}
+          </button>
+
+          <button
+            onClick={() => setView("stats")}
+            className="w-full rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-600 py-4 text-lg font-bold text-white shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)] hover:scale-[1.02] transition-all flex items-center justify-center gap-3"
+          >
+            <span>📊 צפייה בסטטיסטיקות כיתתיות</span>
           </button>
 
           <div className="h-px bg-indigo-500/20 my-2"></div>

@@ -1,4 +1,11 @@
 // src/services/authDb.js
+/**
+ * Logical Backend Service
+ * -----------------------
+ * This file is part of the server-side logic layer.
+ * It abstracts the database operations (Firebase) from the client-side View layer.
+ * All direct DB access should happen here.
+ */
 import { db } from "../firebase";
 import {
   collectionGroup,
