@@ -8,6 +8,8 @@
 import { db } from "../firebase";
 import { doc } from "firebase/firestore";
 
+import { apiClient } from "../../config/api";
+
 /**
  * שמירת רשומת שינה בנתיב ההיררכי
  * שימוש בשרת Express
@@ -19,24 +21,15 @@ export async function saveSleepEntry(experimentId, classId, studentId, entry) {
   }
 
   try {
-    const response = await fetch("http://localhost:3000/api/sleep/entry", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const { docId } = await apiClient("/api/sleep/entry", {
+      body: {
         experimentId,
         classId,
         studentId,
         entry
-      }),
+      }
     });
 
-    if (!response.ok) {
-      throw new Error(`Server error: ${response.status}`);
-    }
-
-    const { docId } = await response.json();
     return docId;
 
   } catch (error) {
