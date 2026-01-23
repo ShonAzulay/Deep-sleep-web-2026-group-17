@@ -20,8 +20,8 @@ import {
 } from "firebase/firestore";
 
 /**
- * בודק האם שם משתמש כבר תפוס במערכת (עבור תפקיד סטודנט)
- * משתמש ב-Collection Group Query כדי לבדוק בכל ההיררכיה
+ * Checks if a username is already taken in the system (for student role)
+ * Uses Collection Group Query to check in the entire hierarchy
  */
 async function isStudentUsernameTaken(username) {
   const q = query(
@@ -36,11 +36,7 @@ async function isStudentUsernameTaken(username) {
 }
 
 /**
- * יצירת תלמיד חדש ב-Database בהיררכיה החדשה
- * experiments/{expId}/classes/{classId}/users/{studentId}
- */
-/**
- * יצירת תלמיד חדש ב-Database בהיררכיה החדשה
+ * Create a new student in Database in the new hierarchy
  * experiments/{expId}/classes/{classId}/users/{studentId}
  */
 export async function researchManagerCreateStudent({ experimentId, username, password, schoolName, grade, classNum }) {
@@ -65,17 +61,17 @@ export async function researchManagerCreateStudent({ experimentId, username, pas
   const sanitize = (str) => str.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-\u0590-\u05FF]/g, '');
   const derivedClassId = `${sanitize(trimmedSchool)}_${sanitize(trimmedGrade)}_${sanitize(trimmedClassNum)}`;
 
-  // יצירת ה-ID המותאם אישית
+  // Create custom ID
   const customId = `Student-${derivedClassId}-${trimmedUsername}`;
 
-  // בניית הנתיב החדש
+  // Build the new path
   const studentDocRef = doc(db, "experiments", trimmedExpId, "classes", derivedClassId, "users", customId);
 
   await setDoc(studentDocRef, {
     role: "student",
     username: trimmedUsername,
     password: trimmedPassword,
-    className: `${trimmedGrade}${trimmedClassNum}`, // תצוגה כללית
+    className: `${trimmedGrade}${trimmedClassNum}`, // General display
 
     // Hierarchy context
     schoolName: trimmedSchool,
@@ -91,7 +87,7 @@ export async function researchManagerCreateStudent({ experimentId, username, pas
 }
 
 /**
- * מחיקת תלמיד מה-Database
+ * Delete student from Database
  */
 export async function researchManagerDeleteStudent(experimentId, classId, username) {
   try {
@@ -99,13 +95,13 @@ export async function researchManagerDeleteStudent(experimentId, classId, userna
     const trimmedClassId = classId.trim();
     const trimmedUsername = username.trim();
 
-    // בניית ה-ID המדויק כפי שנשמר ביצירה
+    // Build exact ID as saved during creation
     const customId = `Student-${trimmedClassId}-${trimmedUsername}`;
 
-    // בניית הנתיב המלא למחיקה
+    // Build full path for deletion
     const studentDocRef = doc(db, "experiments", trimmedExpId, "classes", trimmedClassId, "users", customId);
 
-    // ביצוע המחיקה
+    // Perform deletion
     await deleteDoc(studentDocRef);
 
     return true;

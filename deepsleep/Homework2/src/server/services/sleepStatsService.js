@@ -8,16 +8,16 @@
 import { db } from "../firebase";
 import { collectionGroup, getDocs, query } from "firebase/firestore";
 
-// שליפת כל הטפסים מכל הניסויים והכיתות
+// Fetch all forms from all experiments and classes
 export async function fetchAllSleepEntries() {
-  // שימוש ב-collectionGroup כדי לשלוף את כל המסמכים בקולקציית "responses"
-  // לא משנה איפה הם נמצאים בהיררכיה
+  // Use collectionGroup to fetch all documents in "responses" collection
+  // Regardless of where they are in the hierarchy
   const q = query(collectionGroup(db, "responses"));
   const snap = await getDocs(q);
   return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
-// שליפת טפסים עבור כיתה ספציפית (למורה)
+// Fetch forms for a specific class (for teacher)
 import { collection } from "firebase/firestore";
 export async function fetchClassSleepEntries(experimentId, classId) {
   if (!experimentId || !classId) return [];
@@ -26,7 +26,7 @@ export async function fetchClassSleepEntries(experimentId, classId) {
   return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
-// חישוב סטטיסטיקה לכל השאלות
+// Compute statistics for all questions
 export function computeSleepStats(entries) {
   const total = entries.length;
 

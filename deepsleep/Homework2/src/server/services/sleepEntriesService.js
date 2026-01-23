@@ -11,13 +11,13 @@ import { doc } from "firebase/firestore";
 import { apiClient } from "../../config/api";
 
 /**
- * שמירת רשומת שינה בנתיב ההיררכי
- * שימוש בשרת Express
+ * Save sleep entry in hierarchical path
+ * Uses Express server
  * experiments/{expId}/classes/{classId}/responses/{studentId_Date}
  */
 export async function saveSleepEntry(experimentId, classId, studentId, entry) {
   if (!experimentId || !classId || !studentId) {
-    throw new Error("Missing required context IDs (experimentId, classId, studentId)");
+    throw new Error("חסרים מזהי הקשר נדרשים (experimentId, classId, studentId)");
   }
 
   try {
@@ -39,7 +39,7 @@ export async function saveSleepEntry(experimentId, classId, studentId, entry) {
 }
 
 /**
- * החזרת מספר הרשומות שהמשתמש מילא (עבור פרוגרס בר ושחרור שלבים)
+ * Return number of entries filled by user (for progress bar and unlock stages)
  */
 import { collection, query, where, getCountFromServer, getDocs, collectionGroup } from "firebase/firestore";
 
@@ -56,8 +56,8 @@ export async function getUserSubmissionCount(experimentId, classId, studentId) {
 }
 
 /**
- * החזרת מועד ההגשה האחרון (timestamp) של תלמיד
- * לצורך חישוב מתי הוא יכול להגיש שוב (למשל: ביום למחרת ב-7 בבוקר)
+ * Return last submission time (timestamp) of student
+ * To calculate when they can submit again (e.g. next day at 7am)
  */
 import { limit, orderBy } from "firebase/firestore";
 
@@ -89,7 +89,7 @@ export async function getLastSubmissionTime(experimentId, classId, studentId) {
 }
 
 /**
- * שליפת כל רשומות השינה מכל הכיתות לטובת דוחות
+ * Fetch all sleep entries from all classes for reports
  */
 export async function fetchAllSleepEntries() {
   try {

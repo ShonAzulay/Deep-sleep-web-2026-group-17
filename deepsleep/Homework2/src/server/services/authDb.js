@@ -9,8 +9,8 @@
 import { apiClient } from "../../config/api";
 
 /**
- * התחברות למערכת באמצעות מסד הנתונים
- * שימוש בשרת Express
+ * Login to the system using the database
+ * Uses Express server
  */
 export async function loginWithDb({ role, username, password }) {
   try {

@@ -23,11 +23,11 @@ const getRequestsCol = (expId, classId) => collection(db, "experiments", expId, 
 const getActiveQuestionsCol = (expId, classId) => collection(db, "experiments", expId, "classes", classId, "activeQuestions");
 
 /**
- * מגיש בקשה להוספת שאלה (למשל ע"י מורה)
+ * Submits a request to add a question (e.g. by a teacher)
  */
 export async function submitQuestionRequest(experimentId, classId, questionData) {
   const { text, type = "text", options = [] } = questionData;
-  if (!text || !text.trim()) throw new Error("Question text cannot be empty");
+  if (!text || !text.trim()) throw new Error("טקסט השאלה לא יכול להיות ריק");
 
   await addDoc(getRequestsCol(experimentId, classId), {
     text: text,
@@ -39,11 +39,11 @@ export async function submitQuestionRequest(experimentId, classId, questionData)
 }
 
 /**
- * שולף את כל השאלות הממתינות לאישור עבור כיתה מסוימת
+ * Fetches all pending questions for a specific class
  */
 /**
- * שולף את כל השאלות הממתינות מכל הכיתות ומכל הניסויים
- * משתמש ב-Collection Group Query
+ * Fetches all pending questions from all classes and experiments
+ * Uses Collection Group Query
  */
 export async function fetchPendingQuestions() {
   const q = query(
@@ -53,24 +53,24 @@ export async function fetchPendingQuestions() {
 
   const snap = await getDocs(q);
   return snap.docs.map(d => {
-    // היררכיה: experiments/{expId}/classes/{classId}/questionRequests/{docId}
+    // Hierarchy: experiments/{expId}/classes/{classId}/questionRequests/{docId}
     const classRef = d.ref.parent.parent;
     const expRef = classRef.parent.parent;
 
     return {
       id: d.id,
       ...d.data(),
-      // שליפת הקשר (Context) מהנתיב כדי שנדע מאיפה זה הגיע
+      // Extract context from path to know the source
       classId: classRef.id,
       experimentId: expRef.id,
-      path: d.ref.path // שומרים את הנתיב המלא לשימוש בעדכון
+      path: d.ref.path // Save full path for update usage
     };
   });
 }
 
 /**
- * אישור רשימת שאלות (כולל עריכה וסיווג)
- * מקבל את המידע המלא (כולל classId ו-experimentId) מתוך האובייקט של השאלה עצמה
+ * Approve list of questions (including edit and categorize)
+ * Receives full info (including classId and experimentId) from the question object itself
  */
 export async function approveQuestions(approvedQuestionsList) {
   const batch = writeBatch(db);
@@ -78,13 +78,13 @@ export async function approveQuestions(approvedQuestionsList) {
   for (const item of approvedQuestionsList) {
     const { originalId, finalText, category, classId, experimentId, type, options } = item;
 
-    // וודא שיש לנו את כל המידע הדרוש
+    // Ensure we have all required info
     if (!classId || !experimentId) {
       console.warn("Missing context for question approval", item);
       continue;
     }
 
-    // 1. יצירת השאלה ב-activeQuestions של הכיתה הספציפית
+    // 1. Create question in activeQuestions of the specific class
     const newQuestionRef = doc(collection(db, "experiments", experimentId, "classes", classId, "activeQuestions"));
 
     batch.set(newQuestionRef, {
@@ -97,7 +97,7 @@ export async function approveQuestions(approvedQuestionsList) {
       isVisible: true
     });
 
-    // 2. עדכון הסטטוס של הבקשה המקורית
+    // 2. Update status of the original request
     const requestRef = doc(db, "experiments", experimentId, "classes", classId, "questionRequests", originalId);
     batch.update(requestRef, {
       status: "approved",
@@ -110,7 +110,7 @@ export async function approveQuestions(approvedQuestionsList) {
 }
 
 /**
- * שליפת שאלות פעילות (לשימוש התלמידים/דשבורד)
+ * Fetch active questions (for students/dashboard usage)
  */
 export async function fetchActiveQuestions(experimentId, classId) {
   const snap = await getDocs(getActiveQuestionsCol(experimentId, classId));
@@ -118,7 +118,7 @@ export async function fetchActiveQuestions(experimentId, classId) {
 }
 
 /**
- * שליפת כל השאלות הפעילות מכל הכיתות לטובת דוחות
+ * Fetch all active questions from all classes for reports
  */
 export async function fetchAllGlobalActiveQuestions() {
   const q = query(collectionGroup(db, "activeQuestions"));

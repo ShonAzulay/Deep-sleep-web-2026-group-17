@@ -9,12 +9,12 @@ import { db } from "../firebase";
 import { collection, getDocs, getCountFromServer } from "firebase/firestore";
 
 /**
- * שליפת נתוני שינה עבור כיתה ספציפית
+ * Fetch sleep data for a specific class
  * data path: experiments/{expId}/classes/{classId}/responses
  */
 export async function teacherGetClassData(experimentId, classId) {
   if (!experimentId || !classId) {
-    throw new Error("Must provide experimentId and classId");
+    throw new Error("חובה לספק מזהה ניסוי ומזהה כיתה");
   }
 
   try {
