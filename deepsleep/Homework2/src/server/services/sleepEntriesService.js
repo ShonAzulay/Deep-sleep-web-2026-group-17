@@ -6,42 +6,43 @@
  * All direct DB access should happen here.
  */
 import { db } from "../firebase";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc } from "firebase/firestore";
 
 /**
  * שמירת רשומת שינה בנתיב ההיררכי
+ * שימוש בשרת Express
  * experiments/{expId}/classes/{classId}/responses/{studentId_Date}
- * 
- * @param {string} experimentId
- * @param {string} classId
- * @param {string} studentId
- * @param {Object} entry - אובייקט עם נתוני השינה. חייב להכיל שדה date או שנשתמש בתאריך הנוכחי.
  */
 export async function saveSleepEntry(experimentId, classId, studentId, entry) {
   if (!experimentId || !classId || !studentId) {
     throw new Error("Missing required context IDs (experimentId, classId, studentId)");
   }
 
-  // נניח ש-entry.date הוא מחרוזת תאריך (YYYY-MM-DD). אם אין, ניקח מהיום.
-  // כדאי לוודא שהפורמט עקבי כדי למנוע כפילויות.
-  const dateStr = entry.date || new Date().toISOString().split('T')[0];
+  try {
+    const response = await fetch("http://localhost:3000/api/sleep/entry", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        experimentId,
+        classId,
+        studentId,
+        entry
+      }),
+    });
 
-  // יצירת מזהה ייחודי לרשומה למניעת כפילויות באותו יום
-  // יצירת מזהה ייחודי לרשומה למניעת כפילויות באותו יום
-  const docId = `${studentId}_${dateStr}`;
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`);
+    }
 
-  const responseDocRef = doc(db, "experiments", experimentId, "classes", classId, "responses", docId);
+    const { docId } = await response.json();
+    return docId;
 
-  await setDoc(responseDocRef, {
-    ...entry,
-    studentId,
-    experimentId,
-    classId,
-    date: dateStr, // מוודאים שהתאריך נשמר
-    updatedAt: serverTimestamp()
-  });
-
-  return docId;
+  } catch (error) {
+    console.error("Save Sleep Entry API Error:", error);
+    throw error;
+  }
 }
 
 /**

@@ -6,36 +6,34 @@
  * It abstracts the database operations (Firebase) from the client-side View layer.
  * All direct DB access should happen here.
  */
-import { db } from "../firebase";
-import {
-  collectionGroup,
-  getDocs,
-  limit,
-  query,
-  where
-} from "firebase/firestore";
+// Imports removed as logic moved to server
 
 /**
  * התחברות למערכת באמצעות מסד הנתונים
- * משתמש ב-Collection Group Query כדי למצוא את המשתמש בכל מקום בהיררכיה
- * דורש אינדקס ב-Firestore עבור השדות: role, username, password (או שילוב)
+ * שימוש בשרת Express
  */
 export async function loginWithDb({ role, username, password }) {
-  // חיפוש בכל אוסף שנקרא "users" לא משנה איפה הוא ממוקם
-  const usersQ = query(
-    collectionGroup(db, "users"),
-    where("role", "==", role),
-    where("username", "==", username.trim()),
-    where("password", "==", password.trim()),
-    limit(1)
-  );
+  try {
+    const response = await fetch("http://localhost:3000/api/users/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ role, username, password }),
+    });
 
-  const snap = await getDocs(usersQ);
-  if (snap.empty) return null; // אם לא נמצא משתמש כזה
+    if (!response.ok) {
+      // אם הסרבר החזיר שגיאה (כגון 401), נזרוק אותה או נחזיר null
+      // במקרה הזה נשמור על התנהגות הפונקציה המקורית שמחזירה null אם לא נמצא
+      if (response.status === 401) return null;
+      throw new Error("Server error");
+    }
 
-  const userDoc = snap.docs[0];
-  const userData = userDoc.data();
+    const userData = await response.json();
+    return userData;
 
-  // הנתונים מכילים גם את experimentId ו-classId שרשמנו ביצירה
-  return { id: userDoc.id, ...userData };
+  } catch (error) {
+    console.error("Login API Error:", error);
+    throw error;
+  }
 }
