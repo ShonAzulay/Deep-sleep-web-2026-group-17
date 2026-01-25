@@ -1,7 +1,10 @@
 import admin from "firebase-admin";
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
-const serviceAccount = require("./serviceAccountKey.json");
+// Check for environment variable first (Production)
+const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT
+    ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+    : require("./serviceAccountKey.json"); // Fallback to file (Local Development)
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
